@@ -3,14 +3,6 @@ import buildServer from './app.js';
 
 const server = await buildServer();
 
-// Basic liveness check
-server.get('/healthz', () => {
-  return {
-    status: 'ok',
-    uptime: process.uptime(),
-  };
-});
-
 closeWithGrace({ delay: 500 }, async function ({ signal, err }) {
   if (err) {
     server.log.error({ err }, 'server closing with error');
@@ -22,8 +14,9 @@ closeWithGrace({ delay: 500 }, async function ({ signal, err }) {
 });
 
 const port = Number(server.config.PORT);
+const host = server.config.HOST;
 
-server.listen({ port: port }, function (err) {
+server.listen({ port, host }, function (err) {
   if (err) {
     server.log.error(err);
     process.exit(1);

@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "start": "vite preview",
+    "check-types": "tsc -b",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@compta/contracts": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

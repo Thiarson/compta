@@ -30,7 +30,7 @@ export class BadRequestError extends HttpError {
 
 export class UnauthorizedError extends HttpError {
   constructor(message: string) {
-    super(403, 'UNAUTHORIZED', message);
+    super(401, 'UNAUTHORIZED', message);
   }
 }
 

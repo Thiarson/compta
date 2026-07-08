@@ -32,6 +32,14 @@ export default fp(async function errorHandlerPlugin(app) {
       });
     }
 
+    if (typeof error.statusCode === 'number' && error.statusCode < 500) {
+      return reply.status(error.statusCode).send({
+        statusCode: error.statusCode,
+        code: error.code,
+        message: error.message,
+      });
+    }
+
     app.log.error({ err: error, reqId: request.id }, error.message);
 
     const err = new InternalServerError('An unexpected error occurred');
