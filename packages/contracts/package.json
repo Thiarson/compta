@@ -9,12 +9,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.30"
   },
   "devDependencies": {
+    "@compta/eslint-config": "workspace:*",
+    "eslint": "^10.6.0",
     "typescript": "~6.0.3"
   }
 }

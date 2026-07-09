@@ -1,0 +1,29 @@
+{
+  "languages": {
+    "JavaScript": {
+      "format_on_save": "on",
+      "formatter": [
+        { "code_action": "source.fixAll.eslint" },
+        { "external": { "command": "node_modules/.bin/prettier", "arguments": ["--stdin-filepath", "{buffer_path}"] } }
+      ]
+    },
+    "TypeScript": {
+      "format_on_save": "on",
+      "formatter": [
+        { "code_action": "source.fixAll.eslint" },
+        { "external": { "command": "node_modules/.bin/prettier", "arguments": ["--stdin-filepath", "{buffer_path}"] } }
+      ]
+    },
+    "TSX": {
+      "format_on_save": "on",
+      "formatter": [
+        { "code_action": "source.fixAll.eslint" },
+        { "external": { "command": "node_modules/.bin/prettier", "arguments": ["--stdin-filepath", "{buffer_path}"] } }
+      ]
+    },
+    "JSON": {
+      "format_on_save": "on",
+      "formatter": "prettier"
+    }
+  }
+}

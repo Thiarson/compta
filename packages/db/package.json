@@ -10,6 +10,9 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -20,9 +23,11 @@
     "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "@compta/eslint-config": "workspace:*",
     "@types/node": "^24.13.2",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^10.6.0",
     "typescript": "~6.0.3"
   }
 }

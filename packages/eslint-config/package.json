@@ -1,0 +1,32 @@
+{
+  "name": "@compta/eslint-config",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./base.js",
+  "types": "./base.d.ts",
+  "exports": {
+    ".": {
+      "types": "./base.d.ts",
+      "default": "./base.js"
+    },
+    "./react": {
+      "types": "./react.d.ts",
+      "default": "./react.js"
+    }
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.7.0",
+    "typescript-eslint": "^8.62.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.6.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10"
+  }
+}
