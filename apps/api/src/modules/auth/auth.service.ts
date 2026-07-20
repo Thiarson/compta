@@ -1,7 +1,7 @@
 import { daysToMs } from '../../utils/time.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
-import { ConflictError, UnauthorizedError } from '../../utils/http-error.js';
+import { ConflictError, NotFoundError, UnauthorizedError } from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS } from '../../constants/token.js';
 
 import type { EmailProvider } from '../../plugins/email.js';
@@ -19,17 +19,15 @@ export function buildAuthService(
   emailProvider: EmailProvider,
   config: AuthServiceConfig,
 ) {
-  async function sendVerificationEmail(userId: string, email: string, username: string) {
+  function generateVerificationToken() {
     const token = generateToken();
     const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
     const verificationUrl = `${config.appUrl}/verify-email?token=${token}`;
 
-    await authRepository.createEmailVerificationToken({
-      userId: userId,
-      tokenHash: hashToken(token),
-      expiresAt,
-    });
+    return { token, expiresAt, verificationUrl };
+  }
 
+  async function sendVerificationEmail(email: string, username: string, verificationUrl: string) {
     await emailProvider.sendEmail(
       email,
       'Verify your Compta email',
@@ -53,7 +51,15 @@ export function buildAuthService(
       const passwordHash = await hashPassword(password);
       const newUser = await authRepository.createUser({ username, email, passwordHash });
 
-      await sendVerificationEmail(newUser.id, email, username);
+      const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+      await authRepository.createEmailVerificationToken({
+        userId: newUser.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendVerificationEmail(email, username, verificationUrl);
 
       return newUser;
     },
@@ -70,6 +76,27 @@ export function buildAuthService(
       }
 
       return user;
+    },
+
+    async resendVerification(userId: string) {
+      const user = await authRepository.findUserById(userId);
+      if (!user || !user.isActive) {
+        throw new NotFoundError('Account does not exist');
+      }
+
+      if (user.emailVerifiedAt != null) {
+        throw new ConflictError('Email already verified');
+      }
+
+      const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+      await authRepository.createEmailVerificationToken({
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendVerificationEmail(user.email, user.username, verificationUrl);
     },
 
     async storeRefreshToken(userId: string, refreshToken: string, tokenTtlDays: number) {

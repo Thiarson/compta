@@ -86,6 +86,13 @@ export function buildAuthController(authService: AuthService) {
       });
     },
 
+    async resendVerification(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+      const { sub: userId } = await request.verifyAccessToken();
+      await authService.resendVerification(userId);
+
+      reply.status(202).send();
+    },
+
     async refresh(request: FastifyRequest<RefreshRoute>, reply: FastifyReply<RefreshRoute>) {
       const oldRefreshToken = request.cookies[REFRESH_COOKIE_NAME];
       if (!oldRefreshToken) {

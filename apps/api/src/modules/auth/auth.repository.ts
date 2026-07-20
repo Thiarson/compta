@@ -35,7 +35,13 @@ export function buildAuthRepository(db: Database['db']) {
     },
 
     async createEmailVerificationToken(data: NewEmailVerificationToken) {
-      await db.insert(emailVerificationTokens).values(data);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(emailVerificationTokens)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(emailVerificationTokens.userId, data.userId));
+        await tx.insert(emailVerificationTokens).values(data);
+      });
     },
   };
 }
