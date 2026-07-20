@@ -1,5 +1,7 @@
 import fp from 'fastify-plugin';
-import { createDatabase, type Database } from '@compta/db';
+import { createDatabase } from '@compta/db';
+
+import type { Database } from '@compta/db';
 
 declare module 'fastify' {
   interface FastifyInstance {

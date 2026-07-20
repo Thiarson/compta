@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { users, refreshTokens } from '@compta/db';
+import { users, refreshTokens, emailVerificationTokens } from '@compta/db';
 
-import type { Database, NewUser, NewRefreshToken } from '@compta/db';
+import type { Database, NewUser, NewRefreshToken, NewEmailVerificationToken } from '@compta/db';
 
 export function buildAuthRepository(db: Database['db']) {
   return {
@@ -32,6 +32,10 @@ export function buildAuthRepository(db: Database['db']) {
         .update(refreshTokens)
         .set({ revokedAt: new Date() })
         .where(eq(refreshTokens.tokenHash, tokenHash));
+    },
+
+    async createEmailVerificationToken(data: NewEmailVerificationToken) {
+      await db.insert(emailVerificationTokens).values(data);
     },
   };
 }

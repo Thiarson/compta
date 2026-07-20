@@ -7,7 +7,7 @@ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
 const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   const authRepository = buildAuthRepository(app.db);
-  const authService = buildAuthService(authRepository);
+  const authService = buildAuthService(authRepository, app.email, { appUrl: app.config.APP_URL });
   const authController = buildAuthController(authService);
 
   app.post(

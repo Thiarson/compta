@@ -15,6 +15,13 @@
       "when": 1783317896210,
       "tag": "0001_calm_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783797574023,
+      "tag": "0002_mute_jamie_braddock",
+      "breakpoints": true
     }
   ]
 }
