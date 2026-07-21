@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { users, refreshTokens, emailVerificationTokens } from '@compta/db';
 
 import type { Database, NewUser, NewRefreshToken, NewEmailVerificationToken } from '@compta/db';
@@ -41,6 +41,31 @@ export function buildAuthRepository(db: Database['db']) {
           .set({ invalidatedAt: new Date() })
           .where(eq(emailVerificationTokens.userId, data.userId));
         await tx.insert(emailVerificationTokens).values(data);
+      });
+    },
+
+    async findVerificationTokenByHash(tokenHash: string) {
+      return await db.query.emailVerificationTokens.findFirst({
+        where: eq(emailVerificationTokens.tokenHash, tokenHash),
+      });
+    },
+
+    async markEmailAsVerified(userId: string, tokenId: string) {
+      return await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(emailVerificationTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(eq(emailVerificationTokens.id, tokenId), isNull(emailVerificationTokens.usedAt)),
+          )
+          .returning({ id: emailVerificationTokens.id });
+
+        if (updatedRows.length === 0) {
+          return false;
+        }
+
+        await tx.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+        return true;
       });
     },
   };

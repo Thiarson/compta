@@ -15,6 +15,12 @@ export const loginBodySchema = Type.Object({
 
 export type LoginBody = Static<typeof loginBodySchema>;
 
+export const verifyEmailBodySchema = Type.Object({
+  verificationToken: Type.String(),
+});
+
+export type VerifyEmailBody = Static<typeof verifyEmailBodySchema>;
+
 export const authResponseSchema = {
   200: Type.Object({
     accessToken: Type.String(),

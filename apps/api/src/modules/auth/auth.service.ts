@@ -1,7 +1,12 @@
 import { daysToMs } from '../../utils/time.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
-import { ConflictError, NotFoundError, UnauthorizedError } from '../../utils/http-error.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS } from '../../constants/token.js';
 
 import type { EmailProvider } from '../../plugins/email.js';
@@ -97,6 +102,27 @@ export function buildAuthService(
       });
 
       await sendVerificationEmail(user.email, user.username, verificationUrl);
+    },
+
+    async verifyEmailToken(verificationToken: string) {
+      const tokenHash = hashToken(verificationToken);
+      const existingToken = await authRepository.findVerificationTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired verification token');
+      }
+
+      const verified = await authRepository.markEmailAsVerified(
+        existingToken.userId,
+        existingToken.id,
+      );
+      if (!verified) {
+        throw new BadRequestError('Invalid or expired verification token');
+      }
     },
 
     async storeRefreshToken(userId: string, refreshToken: string, tokenTtlDays: number) {
