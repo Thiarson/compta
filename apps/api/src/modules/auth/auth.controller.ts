@@ -2,8 +2,14 @@ import { UnauthorizedError } from '../../utils/http-error.js';
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../../constants/token.js';
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { LoginBody, RegisterBody, AuthResponse, VerifyEmailBody } from '@compta/contracts';
 import type { buildAuthService } from './auth.service.js';
+import type {
+  LoginBody,
+  RegisterBody,
+  AuthResponse,
+  VerifyEmailBody,
+  ForgotPasswordBody,
+} from '@compta/contracts';
 
 type AuthService = ReturnType<typeof buildAuthService>;
 
@@ -19,6 +25,10 @@ interface RegisterRoute {
 
 interface VerifyEmailRoute {
   Body: VerifyEmailBody;
+}
+
+interface ForgotPasswordRoute {
+  Body: ForgotPasswordBody;
 }
 
 interface RefreshRoute {
@@ -102,6 +112,15 @@ export function buildAuthController(authService: AuthService) {
       reply: FastifyReply<VerifyEmailRoute>,
     ) {
       await authService.verifyEmailToken(request.body.verificationToken);
+
+      reply.status(204).send();
+    },
+
+    async forgotPassword(
+      request: FastifyRequest<ForgotPasswordRoute>,
+      reply: FastifyReply<ForgotPasswordRoute>,
+    ) {
+      await authService.resetPassword(request.body.email);
 
       reply.status(204).send();
     },

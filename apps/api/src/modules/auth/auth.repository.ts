@@ -1,7 +1,13 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import { users, refreshTokens, emailVerificationTokens } from '@compta/db';
+import { users, refreshTokens, emailVerificationTokens, passwordResetTokens } from '@compta/db';
 
-import type { Database, NewUser, NewRefreshToken, NewEmailVerificationToken } from '@compta/db';
+import type {
+  Database,
+  NewUser,
+  NewRefreshToken,
+  NewEmailVerificationToken,
+  NewPasswordResetToken,
+} from '@compta/db';
 
 export function buildAuthRepository(db: Database['db']) {
   return {
@@ -41,6 +47,16 @@ export function buildAuthRepository(db: Database['db']) {
           .set({ invalidatedAt: new Date() })
           .where(eq(emailVerificationTokens.userId, data.userId));
         await tx.insert(emailVerificationTokens).values(data);
+      });
+    },
+
+    async createPasswordResetToken(data: NewPasswordResetToken) {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(passwordResetTokens)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(passwordResetTokens.userId, data.userId));
+        await tx.insert(passwordResetTokens).values(data);
       });
     },
 

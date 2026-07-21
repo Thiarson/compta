@@ -7,7 +7,7 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '../../utils/http-error.js';
-import { EMAIL_VERIFICATION_TTL_MS } from '../../constants/token.js';
+import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
 import type { EmailProvider } from '../../plugins/email.js';
 import type { buildAuthRepository } from './auth.repository.js';
@@ -32,6 +32,14 @@ export function buildAuthService(
     return { token, expiresAt, verificationUrl };
   }
 
+  function generatePasswordResetToken() {
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    const passwordResetUrl = `${config.appUrl}/password-reset?token=${token}`;
+
+    return { token, expiresAt, passwordResetUrl };
+  }
+
   async function sendVerificationEmail(email: string, username: string, verificationUrl: string) {
     await emailProvider.sendEmail(
       email,
@@ -42,6 +50,20 @@ export function buildAuthService(
         <p><a href="${verificationUrl}">Verify my email</a></p>
         <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
         <p>If you didn't create an account, you can ignore this email.</p>
+      `,
+    );
+  }
+
+  async function sendPasswordResetEmail(email: string, username: string, passwordResetUrl: string) {
+    await emailProvider.sendEmail(
+      email,
+      'Reset your Compta password',
+      `
+        <p>Hi ${username},</p>
+        <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
+        <p><a href="${passwordResetUrl}">Reset my password</a></p>
+        <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
+        <p>If you didn't reset your password, you can ignore this email.</p>
       `,
     );
   }
@@ -123,6 +145,24 @@ export function buildAuthService(
       if (!verified) {
         throw new BadRequestError('Invalid or expired verification token');
       }
+    },
+
+    async resetPassword(email: string) {
+      const user = await authRepository.findUserByEmail(email);
+      // Should I verify if accout is verified
+      if (!user || !user.isActive) {
+        throw new NotFoundError('No Account with this email');
+      }
+
+      const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
+
+      await authRepository.createPasswordResetToken({
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendPasswordResetEmail(email, user.username, passwordResetUrl);
     },
 
     async storeRefreshToken(userId: string, refreshToken: string, tokenTtlDays: number) {

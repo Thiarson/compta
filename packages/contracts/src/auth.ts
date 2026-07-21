@@ -21,6 +21,12 @@ export const verifyEmailBodySchema = Type.Object({
 
 export type VerifyEmailBody = Static<typeof verifyEmailBodySchema>;
 
+export const forgotPasswordBodySchema = Type.Object({
+  email: Type.String(),
+});
+
+export type ForgotPasswordBody = Static<typeof forgotPasswordBodySchema>;
+
 export const authResponseSchema = {
   200: Type.Object({
     accessToken: Type.String(),
