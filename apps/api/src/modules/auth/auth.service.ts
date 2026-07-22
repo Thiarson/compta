@@ -176,9 +176,27 @@ export function buildAuthService(
       ) {
         throw new BadRequestError('Invalid or expired password reset token');
       }
+    },
 
-      const isMarkedUsed = await authRepository.markPasswordResetTokenAsUsed(existingToken.id);
-      if (!isMarkedUsed) {
+    async resetPassword(passwordResetToken: string, newPassword: string) {
+      const tokenHash = hashToken(passwordResetToken);
+      const existingToken = await authRepository.findPasswordResetTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
+
+      const newPasswordHash = await hashPassword(newPassword);
+      const updated = await authRepository.updatePassword(
+        existingToken.userId,
+        existingToken.id,
+        newPasswordHash,
+      );
+      if (!updated) {
         throw new BadRequestError('Invalid or expired password reset token');
       }
     },

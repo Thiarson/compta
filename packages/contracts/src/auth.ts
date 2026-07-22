@@ -33,6 +33,13 @@ export const verifyPasswordResetBodySchema = Type.Object({
 
 export type VerifyPasswordResetBody = Static<typeof verifyPasswordResetBodySchema>;
 
+export const resetPasswordBodySchema = Type.Object({
+  passwordResetToken: Type.String(),
+  newPassword: Type.String({ minLength: 8 }),
+});
+
+export type ResetPasswordBody = Static<typeof resetPasswordBodySchema>;
+
 export const authResponseSchema = {
   200: Type.Object({
     accessToken: Type.String(),

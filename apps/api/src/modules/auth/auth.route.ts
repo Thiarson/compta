@@ -6,6 +6,7 @@ import {
   forgotPasswordBodySchema,
   loginBodySchema,
   registerBodySchema,
+  resetPasswordBodySchema,
   verifyEmailBodySchema,
   verifyPasswordResetBodySchema,
 } from '@compta/contracts';
@@ -47,6 +48,12 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     '/verify-password-reset',
     { schema: { body: verifyPasswordResetBodySchema } },
     authController.verifyPasswordReset,
+  );
+
+  app.post(
+    '/reset-password',
+    { schema: { body: resetPasswordBodySchema } },
+    authController.resetPassword,
   );
 
   app.post('/refresh', { schema: { response: authResponseSchema } }, authController.refresh);

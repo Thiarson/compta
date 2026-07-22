@@ -10,6 +10,7 @@ import type {
   VerifyEmailBody,
   ForgotPasswordBody,
   VerifyPasswordResetBody,
+  ResetPasswordBody,
 } from '@compta/contracts';
 
 type AuthService = ReturnType<typeof buildAuthService>;
@@ -34,6 +35,10 @@ interface ForgotPasswordRoute {
 
 interface VerifyPasswordResetRoute {
   Body: VerifyPasswordResetBody;
+}
+
+interface ResetPasswordRoute {
+  Body: ResetPasswordBody;
 }
 
 interface RefreshRoute {
@@ -135,6 +140,15 @@ export function buildAuthController(authService: AuthService) {
       reply: FastifyReply<VerifyPasswordResetRoute>,
     ) {
       await authService.verifyPasswordResetToken(request.body.passwordResetToken);
+
+      reply.status(204).send();
+    },
+
+    async resetPassword(
+      request: FastifyRequest<ResetPasswordRoute>,
+      reply: FastifyReply<ResetPasswordRoute>,
+    ) {
+      await authService.resetPassword(request.body.passwordResetToken, request.body.newPassword);
 
       reply.status(204).send();
     },

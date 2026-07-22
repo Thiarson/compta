@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import { users, refreshTokens, emailVerificationTokens, passwordResetTokens } from '@compta/db';
 
 import type {
@@ -78,7 +78,11 @@ export function buildAuthRepository(db: Database['db']) {
           .update(emailVerificationTokens)
           .set({ usedAt: new Date() })
           .where(
-            and(eq(emailVerificationTokens.id, tokenId), isNull(emailVerificationTokens.usedAt)),
+            and(
+              eq(emailVerificationTokens.id, tokenId),
+              isNull(emailVerificationTokens.usedAt),
+              gt(emailVerificationTokens.expiresAt, new Date()),
+            ),
           )
           .returning({ id: emailVerificationTokens.id });
 
@@ -91,14 +95,27 @@ export function buildAuthRepository(db: Database['db']) {
       });
     },
 
-    async markPasswordResetTokenAsUsed(tokenId: string) {
-      const updatedRows = await db
-        .update(passwordResetTokens)
-        .set({ usedAt: new Date() })
-        .where(and(eq(passwordResetTokens.id, tokenId), isNull(passwordResetTokens.usedAt)))
-        .returning({ id: passwordResetTokens.id });
+    async updatePassword(userId: string, tokenId: string, newPasswordHash: string) {
+      return await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(passwordResetTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(
+              eq(passwordResetTokens.id, tokenId),
+              isNull(passwordResetTokens.usedAt),
+              gt(passwordResetTokens.expiresAt, new Date()),
+            ),
+          )
+          .returning({ id: passwordResetTokens.id });
 
-      return updatedRows.length === 0 ? false : true;
+        if (updatedRows.length === 0) {
+          return false;
+        }
+
+        await tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId));
+        return true;
+      });
     },
   };
 }
