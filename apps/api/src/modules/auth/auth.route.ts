@@ -1,7 +1,14 @@
 import { buildAuthService } from './auth.service.js';
 import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
-import { authResponseSchema, loginBodySchema, registerBodySchema } from '@compta/contracts';
+import {
+  authResponseSchema,
+  forgotPasswordBodySchema,
+  loginBodySchema,
+  registerBodySchema,
+  verifyEmailBodySchema,
+  verifyPasswordResetBodySchema,
+} from '@compta/contracts';
 
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
@@ -24,11 +31,23 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post('/resend-verification', authController.resendVerification);
 
-  app.post('/verify-email', authController.verifyEmail);
+  app.post(
+    '/verify-email',
+    { schema: { body: verifyEmailBodySchema } },
+    authController.verifyEmail,
+  );
 
-  app.post('/forgot-password', authController.forgotPassword);
+  app.post(
+    '/forgot-password',
+    { schema: { body: forgotPasswordBodySchema } },
+    authController.forgotPassword,
+  );
 
-  app.post('/verify-password-reset', authController.verifyPasswordReset);
+  app.post(
+    '/verify-password-reset',
+    { schema: { body: verifyPasswordResetBodySchema } },
+    authController.verifyPasswordReset,
+  );
 
   app.post('/refresh', { schema: { response: authResponseSchema } }, authController.refresh);
 

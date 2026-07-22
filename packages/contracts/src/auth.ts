@@ -10,7 +10,7 @@ export type RegisterBody = Static<typeof registerBodySchema>;
 
 export const loginBodySchema = Type.Object({
   email: Type.String({ format: 'email' }),
-  password: Type.String(),
+  password: Type.String({ minLength: 8 }),
 });
 
 export type LoginBody = Static<typeof loginBodySchema>;
