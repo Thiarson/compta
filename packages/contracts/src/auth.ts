@@ -27,6 +27,12 @@ export const forgotPasswordBodySchema = Type.Object({
 
 export type ForgotPasswordBody = Static<typeof forgotPasswordBodySchema>;
 
+export const verifyPasswordResetBodySchema = Type.Object({
+  passwordResetToken: Type.String(),
+});
+
+export type VerifyPasswordResetBody = Static<typeof verifyPasswordResetBodySchema>;
+
 export const authResponseSchema = {
   200: Type.Object({
     accessToken: Type.String(),

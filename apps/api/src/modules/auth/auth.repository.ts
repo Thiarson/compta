@@ -66,6 +66,12 @@ export function buildAuthRepository(db: Database['db']) {
       });
     },
 
+    async findPasswordResetTokenByHash(tokenHash: string) {
+      return await db.query.passwordResetTokens.findFirst({
+        where: eq(passwordResetTokens.tokenHash, tokenHash),
+      });
+    },
+
     async markEmailAsVerified(userId: string, tokenId: string) {
       return await db.transaction(async (tx) => {
         const updatedRows = await tx
@@ -83,6 +89,16 @@ export function buildAuthRepository(db: Database['db']) {
         await tx.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
         return true;
       });
+    },
+
+    async markPasswordResetTokenAsUsed(tokenId: string) {
+      const updatedRows = await db
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(and(eq(passwordResetTokens.id, tokenId), isNull(passwordResetTokens.usedAt)))
+        .returning({ id: passwordResetTokens.id });
+
+      return updatedRows.length === 0 ? false : true;
     },
   };
 }

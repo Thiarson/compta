@@ -28,6 +28,8 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post('/forgot-password', authController.forgotPassword);
 
+  app.post('/verify-password-reset', authController.verifyPasswordReset);
+
   app.post('/refresh', { schema: { response: authResponseSchema } }, authController.refresh);
 
   app.post('/logout', authController.logout);

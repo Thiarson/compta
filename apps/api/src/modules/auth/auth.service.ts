@@ -63,7 +63,7 @@ export function buildAuthService(
         <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
         <p><a href="${passwordResetUrl}">Reset my password</a></p>
         <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
-        <p>If you didn't reset your password, you can ignore this email.</p>
+        <p>If you didn't request a password reset, you can ignore this email.</p>
       `,
     );
   }
@@ -147,7 +147,7 @@ export function buildAuthService(
       }
     },
 
-    async resetPassword(email: string) {
+    async forgotPassword(email: string) {
       const user = await authRepository.findUserByEmail(email);
       // Should I verify if accout is verified
       if (!user || !user.isActive) {
@@ -163,6 +163,24 @@ export function buildAuthService(
       });
 
       await sendPasswordResetEmail(email, user.username, passwordResetUrl);
+    },
+
+    async verifyPasswordResetToken(passwordResetToken: string) {
+      const tokenHash = hashToken(passwordResetToken);
+      const existingToken = await authRepository.findPasswordResetTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
+
+      const isMarkedUsed = await authRepository.markPasswordResetTokenAsUsed(existingToken.id);
+      if (!isMarkedUsed) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
     },
 
     async storeRefreshToken(userId: string, refreshToken: string, tokenTtlDays: number) {
