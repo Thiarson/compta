@@ -5,6 +5,7 @@ import {
   authResponseSchema,
   forgotPasswordBodySchema,
   loginBodySchema,
+  meResponseSchema,
   registerBodySchema,
   resetPasswordBodySchema,
   verifyEmailBodySchema,
@@ -57,6 +58,8 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   );
 
   app.post('/refresh', { schema: { response: authResponseSchema } }, authController.refresh);
+
+  app.get('/me', { schema: { response: meResponseSchema } }, authController.me);
 
   app.post('/logout', authController.logout);
 };

@@ -105,6 +105,15 @@ export function buildAuthService(
       return user;
     },
 
+    async getCurrentUser(userId: string) {
+      const user = await authRepository.findUserById(userId);
+      if (!user || !user.isActive) {
+        throw new UnauthorizedError('Invalid session');
+      }
+
+      return user;
+    },
+
     async resendVerification(userId: string) {
       const user = await authRepository.findUserById(userId);
       if (!user || !user.isActive) {

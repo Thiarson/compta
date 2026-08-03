@@ -7,6 +7,7 @@ import type {
   LoginBody,
   RegisterBody,
   AuthResponse,
+  MeResponse,
   VerifyEmailBody,
   ForgotPasswordBody,
   VerifyPasswordResetBody,
@@ -43,6 +44,10 @@ interface ResetPasswordRoute {
 
 interface RefreshRoute {
   Reply: AuthResponse;
+}
+
+interface MeRoute {
+  Reply: MeResponse;
 }
 
 interface EmptyRoute {
@@ -180,6 +185,17 @@ export function buildAuthController(authService: AuthService) {
           username: user.username,
           email: user.email,
         },
+      });
+    },
+
+    async me(request: FastifyRequest<MeRoute>, reply: FastifyReply<MeRoute>) {
+      const { sub: userId } = await request.verifyAccessToken();
+      const user = await authService.getCurrentUser(userId);
+
+      reply.send({
+        id: user.id,
+        username: user.username,
+        email: user.email,
       });
     },
 
