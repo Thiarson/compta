@@ -40,15 +40,23 @@ export const resetPasswordBodySchema = Type.Object({
 
 export type ResetPasswordBody = Static<typeof resetPasswordBodySchema>;
 
+const userSchema = Type.Object({
+  id: Type.String(),
+  username: Type.String(),
+  email: Type.String(),
+});
+
 export const authResponseSchema = {
   200: Type.Object({
     accessToken: Type.String(),
-    user: Type.Object({
-      id: Type.String(),
-      username: Type.String(),
-      email: Type.String(),
-    }),
+    user: userSchema,
   }),
 };
 
 export type AuthResponse = Static<(typeof authResponseSchema)[200]>;
+
+export const meResponseSchema = {
+  200: userSchema,
+};
+
+export type MeResponse = Static<(typeof meResponseSchema)[200]>;
