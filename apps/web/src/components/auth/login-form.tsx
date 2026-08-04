@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 
 import { cn } from '@/lib/utils';
-import { ApiError } from '@/lib/api-error';
+import { ApiError, getFieldErrors } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useLogin } from '@/features/auth/auth.hooks';
 
@@ -47,6 +53,7 @@ export function LoginForm({
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
+                <FieldError errors={getFieldErrors(login.error, 'email')} />
               </Field>
               <Field>
                 <div className="flex items-center">
@@ -66,12 +73,16 @@ export function LoginForm({
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
+                <FieldError errors={getFieldErrors(login.error, 'password')} />
               </Field>
-              {login.isError && (
-                <p className="text-sm text-destructive">
-                  {login.error instanceof ApiError ? login.error.message : 'Something went wrong'}
-                </p>
-              )}
+              {login.isError &&
+                (!(login.error instanceof ApiError) || login.error.code !== 'VALIDATION_ERROR') && (
+                  <p className="text-sm text-destructive">
+                    {login.error instanceof ApiError
+                      ? login.error.message
+                      : 'Something went wrong'}
+                  </p>
+                )}
               <Field>
                 <Button type="submit" disabled={login.isPending}>
                   {login.isPending ? 'Logging in...' : 'Login'}

@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 
-import { ApiError } from '@/lib/api-error';
+import { ApiError, getFieldErrors } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useRegister } from '@/features/auth/auth.hooks';
 
@@ -50,6 +56,7 @@ export function SignupForm({
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
               />
+              <FieldError errors={getFieldErrors(register.error, 'username')} />
             </Field>
             <Field>
               <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -62,6 +69,7 @@ export function SignupForm({
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
+              <FieldError errors={getFieldErrors(register.error, 'email')} />
             </Field>
             <Field>
               <FieldLabel htmlFor="password">Password</FieldLabel>
@@ -74,6 +82,7 @@ export function SignupForm({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
+              <FieldError errors={getFieldErrors(register.error, 'password')} />
             </Field>
             <Field>
               <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
@@ -87,13 +96,15 @@ export function SignupForm({
                 aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
               />
             </Field>
-            {register.isError && (
-              <p className="text-sm text-destructive">
-                {register.error instanceof ApiError
-                  ? register.error.message
-                  : 'Something went wrong'}
-              </p>
-            )}
+            {register.isError &&
+              (!(register.error instanceof ApiError) ||
+                register.error.code !== 'VALIDATION_ERROR') && (
+                <p className="text-sm text-destructive">
+                  {register.error instanceof ApiError
+                    ? register.error.message
+                    : 'Something went wrong'}
+                </p>
+              )}
             <FieldGroup>
               <Field>
                 <Button type="submit" disabled={register.isPending || !passwordsMatch}>
