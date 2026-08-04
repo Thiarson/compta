@@ -17,10 +17,8 @@ declare module 'fastify' {
   }
 
   interface FastifyRequest {
-    verifyAccessToken<Decoded extends object = { sub: string }>(): Promise<Decoded>;
-    verifyRefreshToken<Decoded extends object = { sub: string }>(options?: {
-      onlyCookie?: boolean;
-    }): Promise<Decoded>;
+    verifyAccessToken(): Promise<{ sub: string }>;
+    verifyRefreshToken(options?: { onlyCookie?: boolean }): Promise<{ sub: string }>;
     accessTokenPayload: { sub: string } | null;
   }
 
