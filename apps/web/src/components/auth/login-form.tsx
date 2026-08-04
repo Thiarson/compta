@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api-error';
@@ -12,9 +13,10 @@ import type { SubmitEvent } from 'react';
 
 export function LoginForm({
   className,
+  redirect,
   onSuccess,
   ...props
-}: React.ComponentProps<'div'> & { onSuccess?: () => void }) {
+}: React.ComponentProps<'div'> & { redirect?: string; onSuccess?: () => void }) {
   const login = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,7 +77,10 @@ export function LoginForm({
                   {login.isPending ? 'Logging in...' : 'Login'}
                 </Button>
                 <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="#">Sign up</a>
+                  Don&apos;t have an account?{' '}
+                  <Link to="/signup" search={{ redirect }}>
+                    Sign up
+                  </Link>
                 </FieldDescription>
               </Field>
             </FieldGroup>
