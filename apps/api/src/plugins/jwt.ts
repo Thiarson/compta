@@ -13,7 +13,7 @@ declare module '@fastify/jwt' {
 
 declare module 'fastify' {
   interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void>;
   }
 
   interface FastifyRequest {
@@ -21,6 +21,7 @@ declare module 'fastify' {
     verifyRefreshToken<Decoded extends object = { sub: string }>(options?: {
       onlyCookie?: boolean;
     }): Promise<Decoded>;
+    accessTokenPayload: { sub: string } | null;
   }
 
   interface FastifyReply {
@@ -47,7 +48,9 @@ export default fp(async function jwtPlugin(app) {
     jwtSign: 'signRefreshToken',
   });
 
+  app.decorateRequest('accessTokenPayload', null);
+
   app.decorate('authenticate', async (request: FastifyRequest) => {
-    await request.verifyAccessToken();
+    request.accessTokenPayload = await request.verifyAccessToken();
   });
 });

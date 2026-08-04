@@ -46,11 +46,11 @@ interface RefreshRoute {
   Reply: AuthResponse;
 }
 
-interface MeRoute {
+export interface MeRoute {
   Reply: MeResponse;
 }
 
-interface EmptyRoute {
+export interface EmptyRoute {
   Reply: void;
 }
 
@@ -116,7 +116,7 @@ export function buildAuthController(authService: AuthService) {
     },
 
     async resendVerification(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
-      const { sub: userId } = await request.verifyAccessToken();
+      const { sub: userId } = request.accessTokenPayload!;
       await authService.resendVerification(userId);
 
       reply.status(202).send();
@@ -189,7 +189,7 @@ export function buildAuthController(authService: AuthService) {
     },
 
     async me(request: FastifyRequest<MeRoute>, reply: FastifyReply<MeRoute>) {
-      const { sub: userId } = await request.verifyAccessToken();
+      const { sub: userId } = request.accessTokenPayload!;
       const user = await authService.getCurrentUser(userId);
 
       reply.send({

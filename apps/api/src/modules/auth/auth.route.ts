@@ -1,6 +1,7 @@
 import { buildAuthService } from './auth.service.js';
 import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
+import type { EmptyRoute, MeRoute } from './auth.controller.js';
 import {
   authResponseSchema,
   forgotPasswordBodySchema,
@@ -31,7 +32,11 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     authController.login,
   );
 
-  app.post('/resend-verification', authController.resendVerification);
+  app.post<EmptyRoute>(
+    '/resend-verification',
+    { preHandler: [app.authenticate] },
+    authController.resendVerification,
+  );
 
   app.post(
     '/verify-email',
@@ -59,7 +64,11 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post('/refresh', { schema: { response: authResponseSchema } }, authController.refresh);
 
-  app.get('/me', { schema: { response: meResponseSchema } }, authController.me);
+  app.get<MeRoute>(
+    '/me',
+    { schema: { response: meResponseSchema }, preHandler: [app.authenticate] },
+    authController.me,
+  );
 
   app.post('/logout', authController.logout);
 };
