@@ -1,8 +1,13 @@
 import { daysToMs } from '../../utils/time.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
-import { ConflictError, UnauthorizedError } from '../../utils/http-error.js';
-import { EMAIL_VERIFICATION_TTL_MS } from '../../constants/token.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../../utils/http-error.js';
+import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
 import type { EmailProvider } from '../../plugins/email.js';
 import type { buildAuthRepository } from './auth.repository.js';
@@ -19,17 +24,23 @@ export function buildAuthService(
   emailProvider: EmailProvider,
   config: AuthServiceConfig,
 ) {
-  async function sendVerificationEmail(userId: string, email: string, username: string) {
+  function generateVerificationToken() {
     const token = generateToken();
     const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
     const verificationUrl = `${config.appUrl}/verify-email?token=${token}`;
 
-    await authRepository.createEmailVerificationToken({
-      userId: userId,
-      tokenHash: hashToken(token),
-      expiresAt,
-    });
+    return { token, expiresAt, verificationUrl };
+  }
 
+  function generatePasswordResetToken() {
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    const passwordResetUrl = `${config.appUrl}/reset-password?token=${token}`;
+
+    return { token, expiresAt, passwordResetUrl };
+  }
+
+  async function sendVerificationEmail(email: string, username: string, verificationUrl: string) {
     await emailProvider.sendEmail(
       email,
       'Verify your Compta email',
@@ -39,6 +50,20 @@ export function buildAuthService(
         <p><a href="${verificationUrl}">Verify my email</a></p>
         <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
         <p>If you didn't create an account, you can ignore this email.</p>
+      `,
+    );
+  }
+
+  async function sendPasswordResetEmail(email: string, username: string, passwordResetUrl: string) {
+    await emailProvider.sendEmail(
+      email,
+      'Reset your Compta password',
+      `
+        <p>Hi ${username},</p>
+        <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
+        <p><a href="${passwordResetUrl}">Reset my password</a></p>
+        <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
+        <p>If you didn't request a password reset, you can ignore this email.</p>
       `,
     );
   }
@@ -53,7 +78,15 @@ export function buildAuthService(
       const passwordHash = await hashPassword(password);
       const newUser = await authRepository.createUser({ username, email, passwordHash });
 
-      await sendVerificationEmail(newUser.id, email, username);
+      const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+      await authRepository.createEmailVerificationToken({
+        userId: newUser.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendVerificationEmail(email, username, verificationUrl);
 
       return newUser;
     },
@@ -70,6 +103,112 @@ export function buildAuthService(
       }
 
       return user;
+    },
+
+    async getCurrentUser(userId: string) {
+      const user = await authRepository.findUserById(userId);
+      if (!user || !user.isActive) {
+        throw new UnauthorizedError('Invalid session');
+      }
+
+      return user;
+    },
+
+    async resendVerification(userId: string) {
+      const user = await authRepository.findUserById(userId);
+      if (!user || !user.isActive) {
+        throw new NotFoundError('Account does not exist');
+      }
+
+      if (user.emailVerifiedAt != null) {
+        throw new ConflictError('Email already verified');
+      }
+
+      const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+      await authRepository.createEmailVerificationToken({
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendVerificationEmail(user.email, user.username, verificationUrl);
+    },
+
+    async verifyEmailToken(verificationToken: string) {
+      const tokenHash = hashToken(verificationToken);
+      const existingToken = await authRepository.findVerificationTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired verification token');
+      }
+
+      const verified = await authRepository.markEmailAsVerified(
+        existingToken.userId,
+        existingToken.id,
+      );
+      if (!verified) {
+        throw new BadRequestError('Invalid or expired verification token');
+      }
+    },
+
+    async forgotPassword(email: string) {
+      const user = await authRepository.findUserByEmail(email);
+      // Always resolve the same way whether or not the account exists,
+      // so this endpoint can't be used to enumerate registered emails.
+      if (!user || !user.isActive) {
+        return;
+      }
+
+      const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
+
+      await authRepository.createPasswordResetToken({
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt,
+      });
+
+      await sendPasswordResetEmail(email, user.username, passwordResetUrl);
+    },
+
+    async verifyPasswordResetToken(passwordResetToken: string) {
+      const tokenHash = hashToken(passwordResetToken);
+      const existingToken = await authRepository.findPasswordResetTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
+    },
+
+    async resetPassword(passwordResetToken: string, newPassword: string) {
+      const tokenHash = hashToken(passwordResetToken);
+      const existingToken = await authRepository.findPasswordResetTokenByHash(tokenHash);
+      if (
+        !existingToken ||
+        existingToken.usedAt != null ||
+        existingToken.invalidatedAt != null ||
+        existingToken.expiresAt < new Date()
+      ) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
+
+      const newPasswordHash = await hashPassword(newPassword);
+      const updated = await authRepository.updatePassword(
+        existingToken.userId,
+        existingToken.id,
+        newPasswordHash,
+      );
+      if (!updated) {
+        throw new BadRequestError('Invalid or expired password reset token');
+      }
     },
 
     async storeRefreshToken(userId: string, refreshToken: string, tokenTtlDays: number) {

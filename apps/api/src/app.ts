@@ -2,6 +2,7 @@ import fastify from 'fastify';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import autoload from '@fastify/autoload';
+import ajvErrors from 'ajv-errors';
 
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 
@@ -15,6 +16,11 @@ async function buildServer() {
   const app = fastify({
     logger: {
       level: 'info',
+    },
+    ajv: {
+      customOptions: { allErrors: true },
+      // @ts-expect-error - ajv-errors' plugin type doesn't match Fastify's stricter Plugin<unknown> type
+      plugins: [ajvErrors],
     },
   }).withTypeProvider<TypeBoxTypeProvider>();
 

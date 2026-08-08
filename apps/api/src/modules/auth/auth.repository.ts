@@ -1,7 +1,13 @@
-import { eq } from 'drizzle-orm';
-import { users, refreshTokens, emailVerificationTokens } from '@compta/db';
+import { and, eq, gt, isNull } from 'drizzle-orm';
+import { users, refreshTokens, emailVerificationTokens, passwordResetTokens } from '@compta/db';
 
-import type { Database, NewUser, NewRefreshToken, NewEmailVerificationToken } from '@compta/db';
+import type {
+  Database,
+  NewUser,
+  NewRefreshToken,
+  NewEmailVerificationToken,
+  NewPasswordResetToken,
+} from '@compta/db';
 
 export function buildAuthRepository(db: Database['db']) {
   return {
@@ -35,7 +41,81 @@ export function buildAuthRepository(db: Database['db']) {
     },
 
     async createEmailVerificationToken(data: NewEmailVerificationToken) {
-      await db.insert(emailVerificationTokens).values(data);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(emailVerificationTokens)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(emailVerificationTokens.userId, data.userId));
+        await tx.insert(emailVerificationTokens).values(data);
+      });
+    },
+
+    async createPasswordResetToken(data: NewPasswordResetToken) {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(passwordResetTokens)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(passwordResetTokens.userId, data.userId));
+        await tx.insert(passwordResetTokens).values(data);
+      });
+    },
+
+    async findVerificationTokenByHash(tokenHash: string) {
+      return await db.query.emailVerificationTokens.findFirst({
+        where: eq(emailVerificationTokens.tokenHash, tokenHash),
+      });
+    },
+
+    async findPasswordResetTokenByHash(tokenHash: string) {
+      return await db.query.passwordResetTokens.findFirst({
+        where: eq(passwordResetTokens.tokenHash, tokenHash),
+      });
+    },
+
+    async markEmailAsVerified(userId: string, tokenId: string) {
+      return await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(emailVerificationTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(
+              eq(emailVerificationTokens.id, tokenId),
+              isNull(emailVerificationTokens.usedAt),
+              gt(emailVerificationTokens.expiresAt, new Date()),
+            ),
+          )
+          .returning({ id: emailVerificationTokens.id });
+
+        if (updatedRows.length === 0) {
+          return false;
+        }
+
+        await tx.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+        return true;
+      });
+    },
+
+    async updatePassword(userId: string, tokenId: string, newPasswordHash: string) {
+      return await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(passwordResetTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(
+              eq(passwordResetTokens.id, tokenId),
+              isNull(passwordResetTokens.usedAt),
+              gt(passwordResetTokens.expiresAt, new Date()),
+            ),
+          )
+          .returning({ id: passwordResetTokens.id });
+
+        if (updatedRows.length === 0) {
+          return false;
+        }
+
+        await tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId));
+        return true;
+      });
     },
   };
 }

@@ -2,8 +2,17 @@ import { UnauthorizedError } from '../../utils/http-error.js';
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../../constants/token.js';
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { LoginBody, RegisterBody, AuthResponse } from '@compta/contracts';
 import type { buildAuthService } from './auth.service.js';
+import type {
+  LoginBody,
+  RegisterBody,
+  AuthResponse,
+  MeResponse,
+  VerifyEmailBody,
+  ForgotPasswordBody,
+  VerifyPasswordResetBody,
+  ResetPasswordBody,
+} from '@compta/contracts';
 
 type AuthService = ReturnType<typeof buildAuthService>;
 
@@ -17,11 +26,31 @@ interface RegisterRoute {
   Reply: AuthResponse;
 }
 
+interface VerifyEmailRoute {
+  Body: VerifyEmailBody;
+}
+
+interface ForgotPasswordRoute {
+  Body: ForgotPasswordBody;
+}
+
+interface VerifyPasswordResetRoute {
+  Body: VerifyPasswordResetBody;
+}
+
+interface ResetPasswordRoute {
+  Body: ResetPasswordBody;
+}
+
 interface RefreshRoute {
   Reply: AuthResponse;
 }
 
-interface EmptyRoute {
+export interface MeRoute {
+  Reply: MeResponse;
+}
+
+export interface EmptyRoute {
   Reply: void;
 }
 
@@ -63,6 +92,7 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
       };
     },
@@ -82,8 +112,52 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
       });
+    },
+
+    async resendVerification(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+      const { sub: userId } = request.accessTokenPayload!;
+      await authService.resendVerification(userId);
+
+      reply.status(202).send();
+    },
+
+    async verifyEmail(
+      request: FastifyRequest<VerifyEmailRoute>,
+      reply: FastifyReply<VerifyEmailRoute>,
+    ) {
+      await authService.verifyEmailToken(request.body.verificationToken);
+
+      reply.status(204).send();
+    },
+
+    async forgotPassword(
+      request: FastifyRequest<ForgotPasswordRoute>,
+      reply: FastifyReply<ForgotPasswordRoute>,
+    ) {
+      await authService.forgotPassword(request.body.email);
+
+      reply.status(204).send();
+    },
+
+    async verifyPasswordReset(
+      request: FastifyRequest<VerifyPasswordResetRoute>,
+      reply: FastifyReply<VerifyPasswordResetRoute>,
+    ) {
+      await authService.verifyPasswordResetToken(request.body.passwordResetToken);
+
+      reply.status(204).send();
+    },
+
+    async resetPassword(
+      request: FastifyRequest<ResetPasswordRoute>,
+      reply: FastifyReply<ResetPasswordRoute>,
+    ) {
+      await authService.resetPassword(request.body.passwordResetToken, request.body.newPassword);
+
+      reply.status(204).send();
     },
 
     async refresh(request: FastifyRequest<RefreshRoute>, reply: FastifyReply<RefreshRoute>) {
@@ -112,7 +186,20 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
+      });
+    },
+
+    async me(request: FastifyRequest<MeRoute>, reply: FastifyReply<MeRoute>) {
+      const { sub: userId } = request.accessTokenPayload!;
+      const user = await authService.getCurrentUser(userId);
+
+      reply.send({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       });
     },
 
