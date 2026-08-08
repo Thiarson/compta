@@ -6,28 +6,21 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ApiError, getFieldErrors } from '@/lib/api-error';
+import { useForgotPassword } from '@/features/auth/auth.hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { useLogin } from '@/features/auth/auth.hooks';
 
 import type { SubmitEvent } from 'react';
 
-export function LoginForm({
-  className,
-  redirect,
-  onSuccess,
-  ...props
-}: React.ComponentProps<'div'> & { redirect?: string; onSuccess?: () => void }) {
-  const login = useLogin();
+export function ForgotPasswordForm({ className, ...props }: React.ComponentProps<'div'>) {
+  const forgotPassword = useForgotPassword();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    login.mutate(
-      { email, password },
+    forgotPassword.mutate(
+      { email },
       {
-        onSuccess,
         onError: (error) => {
           if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') {
             toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
@@ -37,12 +30,43 @@ export function LoginForm({
     );
   }
 
+  if (forgotPassword.isSuccess) {
+    return (
+      <div className={cn('flex flex-col gap-6', className)} {...props}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Check your email</CardTitle>
+            <CardDescription>
+              If an account exists for <span className="font-medium text-foreground">{email}</span>,
+              we&apos;ve sent a link to reset your password. It expires in 30 minutes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldDescription className="text-center">
+              Didn&apos;t get it? Check your spam folder, or{' '}
+              <Link
+                to="/forgot-password"
+                onClick={() => forgotPassword.reset()}
+                className="underline-offset-4 hover:underline"
+              >
+                try another email
+              </Link>
+              .
+            </FieldDescription>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+          <CardTitle>Reset your password</CardTitle>
+          <CardDescription>
+            Enter your email below and we&apos;ll send you a link to reset your password
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -58,37 +82,14 @@ export function LoginForm({
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
-                <FieldError errors={getFieldErrors(login.error, 'email')} />
+                <FieldError errors={getFieldErrors(forgotPassword.error, 'email')} />
               </Field>
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <Link
-                    to="/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <FieldError errors={getFieldErrors(login.error, 'password')} />
-              </Field>
-              <Field>
-                <Button type="submit" disabled={login.isPending}>
-                  {login.isPending ? 'Logging in...' : 'Login'}
+                <Button type="submit" disabled={forgotPassword.isPending}>
+                  {forgotPassword.isPending ? 'Sending...' : 'Send reset link'}
                 </Button>
                 <FieldDescription className="text-center">
-                  Don&apos;t have an account?{' '}
-                  <Link to="/signup" search={{ redirect }}>
-                    Sign up
-                  </Link>
+                  Remembered your password? <Link to="/login">Back to login</Link>
                 </FieldDescription>
               </Field>
             </FieldGroup>

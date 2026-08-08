@@ -49,7 +49,10 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post(
     '/forgot-password',
-    { schema: { body: forgotPasswordBodySchema } },
+    {
+      schema: { body: forgotPasswordBodySchema },
+      config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
+    },
     authController.forgotPassword,
   );
 

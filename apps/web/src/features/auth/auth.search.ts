@@ -18,3 +18,13 @@ export function validateVerifyEmailSearch(search: Record<string, unknown>): Veri
     token: typeof search.token === 'string' ? search.token : undefined,
   };
 }
+
+export type ResetPasswordSearch = {
+  token?: string;
+};
+
+export function validateResetPasswordSearch(search: Record<string, unknown>): ResetPasswordSearch {
+  return {
+    token: typeof search.token === 'string' ? search.token : undefined,
+  };
+}
