@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,17 @@ export function SignupForm({
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!passwordsMatch) return;
-    register.mutate({ username, email, password }, { onSuccess });
+    register.mutate(
+      { username, email, password },
+      {
+        onSuccess,
+        onError: (error) => {
+          if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') {
+            toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+          }
+        },
+      },
+    );
   }
 
   return (
@@ -90,15 +101,6 @@ export function SignupForm({
                 aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
               />
             </Field>
-            {register.isError &&
-              (!(register.error instanceof ApiError) ||
-                register.error.code !== 'VALIDATION_ERROR') && (
-                <p className="text-sm text-destructive">
-                  {register.error instanceof ApiError
-                    ? register.error.message
-                    : 'Something went wrong'}
-                </p>
-              )}
             <FieldGroup>
               <Field>
                 <Button type="submit" disabled={register.isPending || !passwordsMatch}>

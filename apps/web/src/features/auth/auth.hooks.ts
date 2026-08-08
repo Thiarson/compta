@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { authApi } from './auth.api';
 import { authKeys } from './auth.keys';
@@ -50,6 +51,7 @@ export function useLogout() {
       // drop, don't invalidate: there's no session to refetch after logout
       queryClient.removeQueries({ queryKey: authKeys.all });
       router.navigate({ to: '/login' });
+      toast.success('Signed out');
     },
   });
 }

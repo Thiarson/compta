@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,17 @@ export function LoginForm({
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    login.mutate({ email, password }, { onSuccess });
+    login.mutate(
+      { email, password },
+      {
+        onSuccess,
+        onError: (error) => {
+          if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') {
+            toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+          }
+        },
+      },
+    );
   }
 
   return (
@@ -69,12 +80,6 @@ export function LoginForm({
                 />
                 <FieldError errors={getFieldErrors(login.error, 'password')} />
               </Field>
-              {login.isError &&
-                (!(login.error instanceof ApiError) || login.error.code !== 'VALIDATION_ERROR') && (
-                  <p className="text-sm text-destructive">
-                    {login.error instanceof ApiError ? login.error.message : 'Something went wrong'}
-                  </p>
-                )}
               <Field>
                 <Button type="submit" disabled={login.isPending}>
                   {login.isPending ? 'Logging in...' : 'Login'}

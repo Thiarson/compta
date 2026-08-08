@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, getRouteApi, useNavigate, useSearch } from '@tanstack/react-router';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api-error';
@@ -112,7 +113,13 @@ function ResendVerification({
 
   function handleResend() {
     resendVerification.mutate(undefined, {
-      onSuccess: () => setCooldown(RESEND_COOLDOWN_SECONDS),
+      onSuccess: () => {
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+        toast.success('Verification email sent.');
+      },
+      onError: (error) => {
+        toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+      },
     });
   }
 
@@ -130,16 +137,6 @@ function ResendVerification({
         <CardContent>
           <FieldGroup>
             {notice && <FieldError>{notice}</FieldError>}
-            {resendVerification.isSuccess && (
-              <FieldDescription>Verification email sent.</FieldDescription>
-            )}
-            {resendVerification.isError && (
-              <FieldError>
-                {resendVerification.error instanceof ApiError
-                  ? resendVerification.error.message
-                  : 'Something went wrong'}
-              </FieldError>
-            )}
             <Field>
               <Button
                 type="button"
