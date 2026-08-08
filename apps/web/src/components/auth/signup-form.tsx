@@ -1,18 +1,12 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 
-import { ApiError, getFieldErrors } from '@/lib/api-error';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useRegister } from '@/features/auth/auth.hooks';
+import { ApiError, getFieldErrors } from '@/lib/api-error';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 
 import type { SubmitEvent } from 'react';
 

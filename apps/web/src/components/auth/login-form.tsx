@@ -2,17 +2,11 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 
 import { cn } from '@/lib/utils';
-import { ApiError, getFieldErrors } from '@/lib/api-error';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ApiError, getFieldErrors } from '@/lib/api-error';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useLogin } from '@/features/auth/auth.hooks';
 
 import type { SubmitEvent } from 'react';
@@ -78,9 +72,7 @@ export function LoginForm({
               {login.isError &&
                 (!(login.error instanceof ApiError) || login.error.code !== 'VALIDATION_ERROR') && (
                   <p className="text-sm text-destructive">
-                    {login.error instanceof ApiError
-                      ? login.error.message
-                      : 'Something went wrong'}
+                    {login.error instanceof ApiError ? login.error.message : 'Something went wrong'}
                   </p>
                 )}
               <Field>

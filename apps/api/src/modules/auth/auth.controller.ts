@@ -92,6 +92,7 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
       };
     },
@@ -111,6 +112,7 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
       });
     },
@@ -184,6 +186,7 @@ export function buildAuthController(authService: AuthService) {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
       });
     },
@@ -196,6 +199,7 @@ export function buildAuthController(authService: AuthService) {
         id: user.id,
         username: user.username,
         email: user.email,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       });
     },
 

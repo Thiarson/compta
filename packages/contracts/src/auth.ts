@@ -108,6 +108,7 @@ const userSchema = Type.Object({
   id: Type.String(),
   username: Type.String(),
   email: Type.String(),
+  emailVerifiedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
 });
 
 export const authResponseSchema = {

@@ -34,7 +34,10 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post<EmptyRoute>(
     '/resend-verification',
-    { preHandler: [app.authenticate] },
+    {
+      preHandler: [app.authenticate],
+      config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
+    },
     authController.resendVerification,
   );
 
