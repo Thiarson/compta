@@ -25,8 +25,9 @@ async function request<T>(path: string, options: RequestOptions): Promise<T> {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  // 204 No Content has no body to parse
-  const data = res.status === 204 ? null : await res.json();
+  // No body to parse for empty responses (e.g. 202 Accepted, 204 No Content)
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
     throw new ApiError(data.statusCode, data.code, data.message, data.details);

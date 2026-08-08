@@ -6,7 +6,7 @@ import { authKeys } from './auth.keys';
 import { sessionQueryOptions } from './auth.queries';
 import { setAccessToken } from '../../lib/auth-token';
 
-import type { AuthResponse, VerifyEmailBody } from '@compta/contracts';
+import type { AuthResponse } from '@compta/contracts';
 
 export function useSession() {
   return useQuery(sessionQueryOptions);
@@ -50,19 +50,6 @@ export function useLogout() {
       // drop, don't invalidate: there's no session to refetch after logout
       queryClient.removeQueries({ queryKey: authKeys.all });
       router.navigate({ to: '/login' });
-    },
-  });
-}
-
-// Returns the refreshed session (or null if this device has none)
-// so callers know whether to continue in-app or send the user to log in.
-export function useVerifyEmail() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (body: VerifyEmailBody) => {
-      await authApi.verifyEmail(body);
-      return queryClient.fetchQuery(sessionQueryOptions).catch(() => null);
     },
   });
 }

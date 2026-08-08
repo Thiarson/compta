@@ -1,49 +1,55 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { Link, getRouteApi, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldError, FieldGroup } from '@/components/ui/field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  useLogout,
-  useResendVerification,
-  useSession,
-  useVerifyEmail,
-} from '@/features/auth/auth.hooks';
+import { useLogout, useResendVerification, useSession } from '@/features/auth/auth.hooks';
+
+import type { VerifyEmailResult } from '@/routes/verify-email';
 
 // Prevents spamming the resend button.
 const RESEND_COOLDOWN_SECONDS = 30;
 
-export function VerifyEmail({ className, ...props }: React.ComponentProps<'div'>) {
-  const { token, redirect } = useSearch({ from: '/verify-email' });
+const routeApi = getRouteApi('/verify-email');
 
-  if (token) {
-    return <VerifyEmailToken token={token} redirect={redirect} className={className} {...props} />;
+export function VerifyEmail({ className, ...props }: React.ComponentProps<'div'>) {
+  const { redirect } = useSearch({ from: '/verify-email' });
+  const result = routeApi.useLoaderData();
+
+  if (result) {
+    return (
+      <VerifyEmailOutcome result={result} redirect={redirect} className={className} {...props} />
+    );
   }
 
   return <ResendVerification className={className} {...props} />;
 }
 
-function VerifyEmailToken({
-  token,
+// Shown as the route's pendingComponent while the loader verifies the token.
+export function VerifyingEmail({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div className={cn('flex flex-col gap-6', className)} {...props}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Verifying your email…</CardTitle>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+function VerifyEmailOutcome({
+  result,
   redirect,
   className,
   ...props
-}: React.ComponentProps<'div'> & { token: string; redirect?: string }) {
+}: React.ComponentProps<'div'> & { result: VerifyEmailResult; redirect?: string }) {
   const navigate = useNavigate();
-  const hasVerified = useRef(false);
-  const verifyEmail = useVerifyEmail();
-  const { data: sessionUser } = useSession();
 
-  useEffect(() => {
-    if (hasVerified.current) return;
-    hasVerified.current = true;
-    verifyEmail.mutate({ verificationToken: token });
-  }, [token, verifyEmail]);
-
-  if (verifyEmail.isSuccess) {
+  if (result.status === 'success') {
     return (
       <div className={cn('flex flex-col gap-6', className)} {...props}>
         <Card>
@@ -52,7 +58,7 @@ function VerifyEmailToken({
             <CardDescription>Your account is now active.</CardDescription>
           </CardHeader>
           <CardContent>
-            {verifyEmail.data ? (
+            {result.sessionUser ? (
               <Button onClick={() => navigate({ to: redirect ?? '/' })}>
                 Continue to dashboard
               </Button>
@@ -67,39 +73,22 @@ function VerifyEmailToken({
     );
   }
 
-  if (verifyEmail.isError) {
-    const message =
-      verifyEmail.error instanceof ApiError
-        ? verifyEmail.error.message
-        : 'This link is invalid or has expired.';
-
-    if (sessionUser) {
-      return <ResendVerification notice={message} className={className} {...props} />;
-    }
-
-    return (
-      <div className={cn('flex flex-col gap-6', className)} {...props}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Verification failed</CardTitle>
-            <CardDescription>{message}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldDescription>
-              <Link to="/login">Log in</Link> to request a new verification link.
-            </FieldDescription>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (result.sessionUser) {
+    return <ResendVerification notice={result.message} className={className} {...props} />;
   }
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Verifying your email…</CardTitle>
+          <CardTitle>Verification failed</CardTitle>
+          <CardDescription>{result.message}</CardDescription>
         </CardHeader>
+        <CardContent>
+          <FieldDescription>
+            <Link to="/login">Log in</Link> to request a new verification link.
+          </FieldDescription>
+        </CardContent>
       </Card>
     </div>
   );
