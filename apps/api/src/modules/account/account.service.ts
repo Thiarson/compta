@@ -7,5 +7,9 @@ export function buildAccountsService(accountsRepository: AccountsRepository) {
     async getAllUserAccounts(userId: string) {
       return await accountsRepository.getAllAccountByUserId(userId);
     },
+
+    async createNewAccount(userId: string, category: string) {
+      return await accountsRepository.createNewAccountByUserId(userId, category);
+    },
   };
 }

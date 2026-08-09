@@ -1,9 +1,13 @@
 import { buildAccountsService } from './account.service.js';
-import { allAccountsResponseSchema } from '@compta/contracts';
+import {
+  allAccountsResponseSchema,
+  createAccountBodySchema,
+  createAccountResponseSchema,
+} from '@compta/contracts';
 import { buildAccountsController } from './account.controller.js';
 import { buildAccountsRepository } from './account.repository.js';
 
-import type { AllAccountsRoute } from './account.controller.js';
+import type { AllAccountsRoute, CreateAccountRoute } from './account.controller.js';
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
 const accountsRoute: FastifyPluginAsyncTypebox = async (app) => {
@@ -18,6 +22,15 @@ const accountsRoute: FastifyPluginAsyncTypebox = async (app) => {
       preHandler: [app.authenticate],
     },
     accountsController.allAccounts,
+  );
+
+  app.post<CreateAccountRoute>(
+    '/',
+    {
+      schema: { body: createAccountBodySchema, response: createAccountResponseSchema },
+      preHandler: [app.authenticate],
+    },
+    accountsController.createAccount,
   );
 };
 

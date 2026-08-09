@@ -23,5 +23,11 @@ export function buildAccountsRepository(db: Database['db']) {
         },
       });
     },
+
+    async createNewAccountByUserId(userId: string, category: string) {
+      const [account] = await db.insert(accounts).values({ userId, category }).returning();
+
+      return account;
+    },
   };
 }
