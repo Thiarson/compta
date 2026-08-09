@@ -3,6 +3,7 @@ import { users, refreshTokens, emailVerificationTokens, passwordResetTokens } fr
 
 import type {
   Database,
+  DbTransaction,
   NewUser,
   NewRefreshToken,
   NewEmailVerificationToken,
@@ -11,8 +12,8 @@ import type {
 
 export function buildAuthRepository(db: Database['db']) {
   return {
-    async createUser(data: NewUser) {
-      const [user] = await db.insert(users).values(data).returning();
+    async createUser(data: NewUser, executor: Database['db'] | DbTransaction = db) {
+      const [user] = await executor.insert(users).values(data).returning();
       return user;
     },
 

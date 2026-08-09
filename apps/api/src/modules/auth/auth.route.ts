@@ -1,7 +1,7 @@
 import { buildAuthService } from './auth.service.js';
 import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
-import type { EmptyRoute, MeRoute } from './auth.controller.js';
+import { buildAccountsRepository } from '../account/account.repository.js';
 import {
   authResponseSchema,
   forgotPasswordBodySchema,
@@ -13,11 +13,15 @@ import {
   verifyPasswordResetBodySchema,
 } from '@compta/contracts';
 
+import type { EmptyRoute, MeRoute } from './auth.controller.js';
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
 const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   const authRepository = buildAuthRepository(app.db);
-  const authService = buildAuthService(authRepository, app.email, { appUrl: app.config.APP_URL });
+  const accountsRepository = buildAccountsRepository(app.db);
+  const authService = buildAuthService(app.db, authRepository, accountsRepository, app.email, {
+    appUrl: app.config.APP_URL,
+  });
   const authController = buildAuthController(authService);
 
   app.post(
