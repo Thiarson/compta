@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ApiError, getFieldErrors } from '@/lib/api-error';
+import { AuthPending } from '@/components/auth/auth-pending';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useResetPassword } from '@/features/auth/auth.hooks';
@@ -39,16 +40,8 @@ export function ResetPassword({ className, ...props }: React.ComponentProps<'div
 }
 
 // Shown as the route's pendingComponent while the loader verifies the token.
-export function VerifyingResetToken({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Verifying link…</CardTitle>
-        </CardHeader>
-      </Card>
-    </div>
-  );
+export function VerifyingResetToken(props: React.ComponentProps<'div'>) {
+  return <AuthPending title="Verifying link…" {...props} />;
 }
 
 function ResetPasswordForm({

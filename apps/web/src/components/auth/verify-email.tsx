@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
+import { AuthPending } from '@/components/auth/auth-pending';
 import { Field, FieldDescription, FieldError, FieldGroup } from '@/components/ui/field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLogout, useResendVerification, useSession } from '@/features/auth/auth.hooks';
@@ -30,16 +31,8 @@ export function VerifyEmail({ className, ...props }: React.ComponentProps<'div'>
 }
 
 // Shown as the route's pendingComponent while the loader verifies the token.
-export function VerifyingEmail({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Verifying your email…</CardTitle>
-        </CardHeader>
-      </Card>
-    </div>
-  );
+export function VerifyingEmail(props: React.ComponentProps<'div'>) {
+  return <AuthPending title="Verifying your email…" {...props} />;
 }
 
 function VerifyEmailOutcome({
