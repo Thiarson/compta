@@ -10,7 +10,7 @@ export const transactionSchema = Type.Object({
   type: Type.Union(transactionTypes.map((type) => Type.Literal(type))),
   amount: Type.Number(),
   description: Type.Union([Type.String(), Type.Null()]),
-  date: Type.String({ format: 'date-time' }),
+  date: Type.String({ format: 'date' }),
   createdAt: Type.String({ format: 'date-time' }),
 });
 
@@ -31,7 +31,7 @@ export const addTransactionBodySchema = Type.Object(
       errorMessage: { minLength: 'Description must be at least 2 characters' },
     }),
     date: Type.String({
-      format: 'date-time',
+      format: 'date',
       errorMessage: { format: 'Invalid date' },
     }),
   },

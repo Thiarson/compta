@@ -5,6 +5,10 @@ type TransactionsRepository = ReturnType<typeof buildTransactionsRepository>;
 
 export function buildTransactionsService(transactionsRepository: TransactionsRepository) {
   return {
+    async getAllUserTransactions(userId: string) {
+      return await transactionsRepository.getAllTransactionsByUserId(userId);
+    },
+
     async createTransaction(userId: string, data: AddTransactionBody) {
       const account = await transactionsRepository.findAccountByIdAndUserId(data.accountId, userId);
 

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { accounts, transactions } from '@compta/db';
 
 import type { Database, NewTransaction } from '@compta/db';
@@ -14,6 +14,16 @@ export function buildTransactionsRepository(db: Database['db']) {
           eq(accounts.isActive, true),
         ),
         columns: { id: true },
+      });
+    },
+
+    async getAllTransactionsByUserId(userId: string) {
+      return db.query.transactions.findMany({
+        where: inArray(
+          transactions.accountId,
+          db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+        ),
+        orderBy: (t, { desc }) => [desc(t.date), desc(t.createdAt)],
       });
     },
 
