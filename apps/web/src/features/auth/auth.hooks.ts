@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { authApi } from './auth.api';
@@ -11,6 +11,11 @@ import type { AuthResponse } from '@compta/contracts';
 
 export function useSession() {
   return useQuery(sessionQueryOptions);
+}
+
+// Session is already cached by `_authenticated`'s beforeLoad, so this never suspends.
+export function useAuthenticatedSession() {
+  return useSuspenseQuery(sessionQueryOptions);
 }
 
 function useAuthSuccess() {

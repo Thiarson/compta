@@ -36,6 +36,27 @@
       "when": 1784656981191,
       "tag": "0004_dapper_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786220865193,
+      "tag": "0005_lowly_frog_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786278641508,
+      "tag": "0006_colossal_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786291518035,
+      "tag": "0007_white_old_lace",
+      "breakpoints": true
     }
   ]
 }

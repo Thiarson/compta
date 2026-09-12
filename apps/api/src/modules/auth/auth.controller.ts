@@ -16,33 +16,33 @@ import type {
 
 type AuthService = ReturnType<typeof buildAuthService>;
 
-interface LoginRoute {
+export interface LoginRoute {
   Body: LoginBody;
   Reply: AuthResponse;
 }
 
-interface RegisterRoute {
+export interface RegisterRoute {
   Body: RegisterBody;
   Reply: AuthResponse;
 }
 
-interface VerifyEmailRoute {
+export interface VerifyEmailRoute {
   Body: VerifyEmailBody;
 }
 
-interface ForgotPasswordRoute {
+export interface ForgotPasswordRoute {
   Body: ForgotPasswordBody;
 }
 
-interface VerifyPasswordResetRoute {
+export interface VerifyPasswordResetRoute {
   Body: VerifyPasswordResetBody;
 }
 
-interface ResetPasswordRoute {
+export interface ResetPasswordRoute {
   Body: ResetPasswordBody;
 }
 
-interface RefreshRoute {
+export interface RefreshRoute {
   Reply: AuthResponse;
 }
 

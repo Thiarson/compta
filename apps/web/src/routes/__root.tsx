@@ -2,6 +2,9 @@ import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Toaster } from 'sonner';
 
+import { NotFound } from '@/components/errors/not-found';
+import { ErrorPage } from '@/components/errors/error-page';
+
 import type { QueryClient } from '@tanstack/react-query';
 
 interface RouterContext {
@@ -16,4 +19,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       {import.meta.env.DEV && <TanStackRouterDevtools />}
     </>
   ),
+  notFoundComponent: NotFound,
+  errorComponent: ErrorPage,
 });

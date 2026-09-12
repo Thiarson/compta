@@ -9,18 +9,23 @@ import {
 } from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
+import type { Database } from '@compta/db';
 import type { EmailProvider } from '../../plugins/email.js';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
+import type { buildAccountsRepository } from '../account/account.repository.js';
 
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
+type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
 
 interface AuthServiceConfig {
   appUrl: string;
 }
 
 export function buildAuthService(
+  db: Database['db'],
   authRepository: AuthRepository,
+  accountsRepository: AccountsRepository,
   emailProvider: EmailProvider,
   config: AuthServiceConfig,
 ) {
@@ -76,7 +81,11 @@ export function buildAuthService(
       }
 
       const passwordHash = await hashPassword(password);
-      const newUser = await authRepository.createUser({ username, email, passwordHash });
+      const newUser = await db.transaction(async (tx) => {
+        const user = await authRepository.createUser({ username, email, passwordHash }, tx);
+        await accountsRepository.createDefault(user.id, tx);
+        return user;
+      });
 
       const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
