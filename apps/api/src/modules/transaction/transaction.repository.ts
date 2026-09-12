@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { accounts, transactions } from '@compta/db';
 
 import type { Database, NewTransaction } from '@compta/db';
@@ -19,9 +19,12 @@ export function buildTransactionsRepository(db: Database['db']) {
 
     async getAllTransactionsByUserId(userId: string) {
       return db.query.transactions.findMany({
-        where: inArray(
-          transactions.accountId,
-          db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+        where: and(
+          isNull(transactions.deletedAt),
+          inArray(
+            transactions.accountId,
+            db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+          ),
         ),
         orderBy: (t, { desc }) => [desc(t.date), desc(t.createdAt)],
       });
@@ -34,6 +37,27 @@ export function buildTransactionsRepository(db: Database['db']) {
         .returning();
 
       return transaction;
+    },
+
+    async findByIdAndUserId(transactionId: string, userId: string) {
+      return db.query.transactions.findFirst({
+        where: and(
+          eq(transactions.id, transactionId),
+          isNull(transactions.deletedAt),
+          inArray(
+            transactions.accountId,
+            db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+          ),
+        ),
+        columns: { id: true },
+      });
+    },
+
+    async softDeleteById(transactionId: string) {
+      await db
+        .update(transactions)
+        .set({ deletedAt: new Date() })
+        .where(eq(transactions.id, transactionId));
     },
   };
 }

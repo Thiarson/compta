@@ -1,3 +1,5 @@
+import { NotFoundError } from '../../utils/http-error.js';
+
 import type { AddTransactionBody } from '@compta/contracts';
 import type { buildTransactionsRepository } from './transaction.repository.js';
 
@@ -13,10 +15,20 @@ export function buildTransactionsService(transactionsRepository: TransactionsRep
       const account = await transactionsRepository.findAccountByIdAndUserId(data.accountId, userId);
 
       if (!account) {
-        throw new Error('Account not found');
+        throw new NotFoundError('Account not found');
       }
 
       return await transactionsRepository.createTransaction(data);
+    },
+
+    async deleteTransaction(userId: string, transactionId: string) {
+      const transaction = await transactionsRepository.findByIdAndUserId(transactionId, userId);
+
+      if (!transaction) {
+        throw new NotFoundError('Transaction not found');
+      }
+
+      await transactionsRepository.softDeleteById(transactionId);
     },
   };
 }

@@ -61,3 +61,9 @@ export const allTransactionResponseSchema = {
 };
 
 export type AllTransactionResponse = Static<(typeof allTransactionResponseSchema)[200]>;
+
+export const deleteTransactionParamsSchema = Type.Object({
+  id: Type.String(),
+});
+
+export type DeleteTransactionParams = Static<typeof deleteTransactionParamsSchema>;

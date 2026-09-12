@@ -4,6 +4,7 @@ import type {
   AddTransactionBody,
   AddTransactionResponse,
   AllTransactionResponse,
+  DeleteTransactionParams,
 } from '@compta/contracts';
 
 type TransactionService = ReturnType<typeof buildTransactionsService>;
@@ -15,6 +16,11 @@ export interface AllTransactionsRoute {
 export interface AddTransactionRoute {
   Body: AddTransactionBody;
   Reply: AddTransactionResponse;
+}
+
+export interface DeleteTransactionRoute {
+  Params: DeleteTransactionParams;
+  Reply: void;
 }
 
 export function buildTransactionsController(transactionsService: TransactionService) {
@@ -63,6 +69,17 @@ export function buildTransactionsController(transactionsService: TransactionServ
         date: transaction.date,
         createdAt: transaction.createdAt.toISOString(),
       });
+    },
+
+    async deleteTransaction(
+      request: FastifyRequest<DeleteTransactionRoute>,
+      reply: FastifyReply<DeleteTransactionRoute>,
+    ) {
+      const { sub: userId } = request.accessTokenPayload!;
+
+      await transactionsService.deleteTransaction(userId, request.params.id);
+
+      reply.code(204).send();
     },
   };
 }
