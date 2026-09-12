@@ -4,9 +4,7 @@ import { queryClient } from '@/lib/query-client';
 
 import type { AddTransactionBody, AllTransactionResponse } from '@compta/contracts';
 
-export const transactionTypes = ['income', 'expense'] as const;
-
-export type TransactionType = (typeof transactionTypes)[number];
+export type { TransactionType } from '@compta/contracts';
 
 export type Transaction = AllTransactionResponse[number];
 
@@ -26,6 +24,15 @@ export function useTransactions() {
 export function useCreateTransaction() {
   return useMutation({
     mutationFn: (body: AddTransactionBody) => transactionApi.createNewTransaction(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() });
+    },
+  });
+}
+
+export function useDeleteTransaction() {
+  return useMutation({
+    mutationFn: (id: string) => transactionApi.deleteTransaction(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() });
     },

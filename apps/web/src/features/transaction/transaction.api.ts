@@ -11,4 +11,6 @@ export const transactionApi = {
 
   createNewTransaction: (body: AddTransactionBody) =>
     apiFetch<AddTransactionResponse>('/transaction', { method: 'POST', body }),
+
+  deleteTransaction: (id: string) => apiFetch<void>(`/transaction/${id}`, { method: 'DELETE' }),
 };
