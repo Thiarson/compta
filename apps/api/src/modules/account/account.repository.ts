@@ -29,5 +29,28 @@ export function buildAccountsRepository(db: Database['db']) {
 
       return account;
     },
+
+    async findActiveByIdAndUserId(id: string, userId: string) {
+      return db.query.accounts.findFirst({
+        where: and(eq(accounts.id, id), eq(accounts.userId, userId), eq(accounts.isActive, true)),
+        columns: { id: true },
+      });
+    },
+
+    async countActiveByUserId(userId: string) {
+      const activeAccounts = await db.query.accounts.findMany({
+        where: and(eq(accounts.userId, userId), eq(accounts.isActive, true)),
+        columns: { id: true },
+      });
+
+      return activeAccounts.length;
+    },
+
+    async softDeleteById(id: string) {
+      await db
+        .update(accounts)
+        .set({ isActive: false, deletedAt: new Date() })
+        .where(eq(accounts.id, id));
+    },
   };
 }

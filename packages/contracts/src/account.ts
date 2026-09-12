@@ -33,3 +33,9 @@ export const createAccountResponseSchema = {
 };
 
 export type CreateAccountResponse = Static<(typeof createAccountResponseSchema)[201]>;
+
+export const deleteAccountParamsSchema = Type.Object({
+  id: Type.String(),
+});
+
+export type DeleteAccountParams = Static<typeof deleteAccountParamsSchema>;

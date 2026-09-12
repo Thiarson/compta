@@ -4,6 +4,7 @@ import type {
   AllAccountsResponse,
   CreateAccountBody,
   CreateAccountResponse,
+  DeleteAccountParams,
 } from '@compta/contracts';
 
 type AccountsService = ReturnType<typeof buildAccountsService>;
@@ -15,6 +16,11 @@ export interface AllAccountsRoute {
 export interface CreateAccountRoute {
   Body: CreateAccountBody;
   Reply: CreateAccountResponse;
+}
+
+export interface DeleteAccountRoute {
+  Params: DeleteAccountParams;
+  Reply: void;
 }
 
 export function buildAccountsController(accountsService: AccountsService) {
@@ -42,6 +48,17 @@ export function buildAccountsController(accountsService: AccountsService) {
         id: newAccount.id,
         category: newAccount.category,
       });
+    },
+
+    async deleteAccount(
+      request: FastifyRequest<DeleteAccountRoute>,
+      reply: FastifyReply<DeleteAccountRoute>,
+    ) {
+      const { sub: userId } = request.accessTokenPayload!;
+
+      await accountsService.deleteAccount(userId, request.params.id);
+
+      reply.code(204).send();
     },
   };
 }
