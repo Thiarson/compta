@@ -30,17 +30,16 @@ function todayIsoDate() {
 export function AddTransactionDialog({
   open,
   onOpenChange,
-  accounts,
+  defaultAccountId,
   onSubmit,
   defaultDate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  accounts: { id: string; category: string }[];
+  defaultAccountId: string;
   onSubmit: (input: AddTransactionBody) => void;
   defaultDate?: string;
 }) {
-  const [accountId, setAccountId] = React.useState<string | null>(accounts[0]?.id ?? null);
   const [type, setType] = React.useState<TransactionType>('expense');
   const [amount, setAmount] = React.useState('');
   const [description, setDescription] = React.useState('');
@@ -55,15 +54,15 @@ export function AddTransactionDialog({
 
   const parsedAmount = Number(amount);
   const isAmountValid = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const isValid = accountId !== null && isAmountValid && date !== '';
+  const isValid = isAmountValid && date !== '';
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched(true);
-    if (!isValid || accountId === null) return;
+    if (!isValid) return;
 
     onSubmit({
-      accountId,
+      accountId: defaultAccountId,
       type,
       amount: Math.round(parsedAmount),
       description: description.trim() || (type === 'income' ? 'Income' : 'Expense'),
@@ -88,27 +87,10 @@ export function AddTransactionDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="expense">Expense</SelectItem>
                 <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
               </SelectContent>
             </Select>
-          </Field>
-
-          <Field>
-            <FieldLabel>Account</FieldLabel>
-            <Select value={accountId ?? undefined} onValueChange={setAccountId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select an account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {touched && accountId === null && <FieldError>Select an account</FieldError>}
           </Field>
 
           <Field>
@@ -124,9 +106,7 @@ export function AddTransactionDialog({
               onChange={(event) => setAmount(event.target.value)}
               aria-invalid={touched && !isAmountValid}
             />
-            {touched && !isAmountValid && (
-              <FieldError>Amount must be greater than 0</FieldError>
-            )}
+            {touched && !isAmountValid && <FieldError>Amount must be greater than 0</FieldError>}
           </Field>
 
           <Field>
@@ -137,18 +117,6 @@ export function AddTransactionDialog({
               maxLength={200}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="transaction-date">Date</FieldLabel>
-            <Input
-              id="transaction-date"
-              type="date"
-              value={date}
-              max={todayIsoDate()}
-              onChange={(event) => setDate(event.target.value)}
-              aria-invalid={touched && date === ''}
             />
           </Field>
 

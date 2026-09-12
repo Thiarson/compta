@@ -11,6 +11,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DeleteAccountDialog } from '@/components/delete-account-dialog';
+import { DeleteTransactionDialog } from '@/components/delete-transaction-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,17 +30,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useAccount } from '@/features/account/account.hooks';
-import { useCreateTransaction, useTransactions } from '@/features/transaction/transaction.hooks';
+import { createAccountDeletedHandler, useAccount } from '@/features/account/account.hooks';
+import {
+  useCreateTransaction,
+  useTransactions,
+  type Transaction,
+} from '@/features/transaction/transaction.hooks';
 import { cn, formatCurrency, isSameDay, toIsoDate } from '@/lib/utils';
+import { getRouteApi } from '@tanstack/react-router';
 import {
   ArrowDownCircleIcon,
   ArrowUpCircleIcon,
+  EllipsisVerticalIcon,
   PlusIcon,
   ReceiptTextIcon,
   ScaleIcon,
+  Trash2Icon,
   WalletIcon,
 } from 'lucide-react';
+
+import type { AllAccountsResponse } from '@compta/contracts';
 
 const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -40,17 +57,36 @@ const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
+const routeApi = getRouteApi('/_authenticated/');
+
 export default function DashboardPage() {
   const { data: accounts, isPending } = useAccount();
-  const { data: transactions = [] } = useTransactions();
+  const { data: allTransactions = [] } = useTransactions();
   const { mutate: addTransaction } = useCreateTransaction();
   const [addTransactionOpen, setAddTransactionOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(() => new Date());
-
-  const accountsById = React.useMemo(
-    () => new Map((accounts ?? []).map((account) => [account.id, account.category])),
-    [accounts],
+  const [deleteTarget, setDeleteTarget] = React.useState<AllAccountsResponse[number] | null>(null);
+  const [deleteTransactionTarget, setDeleteTransactionTarget] = React.useState<Transaction | null>(
+    null,
   );
+
+  const { accountId } = routeApi.useSearch();
+  const navigate = routeApi.useNavigate();
+
+  const hasAccounts = !isPending && accounts && accounts.length > 0;
+  const activeAccount = hasAccounts
+    ? (accounts.find((account) => account.id === accountId) ?? accounts[0])
+    : undefined;
+
+  React.useEffect(() => {
+    if (hasAccounts && activeAccount && accountId !== activeAccount.id) {
+      navigate({ search: (prev) => ({ ...prev, accountId: activeAccount.id }), replace: true });
+    }
+  }, [hasAccounts, activeAccount, accountId, navigate]);
+
+  const transactions = activeAccount
+    ? allTransactions.filter((transaction) => transaction.accountId === activeAccount.id)
+    : [];
 
   const income = transactions
     .filter((transaction) => transaction.type === 'income')
@@ -66,8 +102,6 @@ export default function DashboardPage() {
   const selectedDayTransactions = transactions.filter(
     (transaction) => transaction.date === selectedIsoDate,
   );
-
-  const hasAccounts = !isPending && accounts && accounts.length > 0;
 
   return (
     <SidebarProvider>
@@ -85,10 +119,30 @@ export default function DashboardPage() {
               </BreadcrumbList>
             </Breadcrumb>
             {hasAccounts && (
-              <Button size="sm" className="ml-auto" onClick={() => setAddTransactionOpen(true)}>
-                <PlusIcon />
-                Add transaction
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Button size="sm" onClick={() => setAddTransactionOpen(true)}>
+                  <PlusIcon />
+                  Add transaction
+                </Button>
+                {accounts.length > 1 && activeAccount && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={<Button variant="ghost" size="icon" aria-label="Account options" />}
+                    >
+                      <EllipsisVerticalIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setDeleteTarget(activeAccount)}
+                      >
+                        <Trash2Icon />
+                        Delete account
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             )}
           </div>
         </header>
@@ -109,10 +163,7 @@ export default function DashboardPage() {
                       Balance
                     </CardDescription>
                     <CardTitle
-                      className={cn(
-                        'text-2xl font-heading',
-                        balance < 0 && 'text-destructive',
-                      )}
+                      className={cn('text-2xl font-heading', balance < 0 && 'text-destructive')}
                     >
                       {formatCurrency(balance)}
                     </CardTitle>
@@ -156,19 +207,15 @@ export default function DashboardPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Account</TableHead>
                           <TableHead>Type</TableHead>
+                          <TableHead>Description</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="w-10" />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedDayTransactions.map((transaction) => (
-                          <TableRow key={transaction.id}>
-                            <TableCell>{transaction.description}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {accountsById.get(transaction.accountId) ?? 'Unknown account'}
-                            </TableCell>
+                          <TableRow key={transaction.id} className="group/transaction-row">
                             <TableCell>
                               <Badge
                                 variant={
@@ -178,6 +225,7 @@ export default function DashboardPage() {
                                 {transaction.type === 'income' ? 'Income' : 'Expense'}
                               </Badge>
                             </TableCell>
+                            <TableCell>{transaction.description}</TableCell>
                             <TableCell
                               className={cn(
                                 'text-right font-medium',
@@ -188,6 +236,17 @@ export default function DashboardPage() {
                             >
                               {transaction.type === 'income' ? '+' : '-'}
                               {formatCurrency(transaction.amount)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="text-muted-foreground opacity-0 group-hover/transaction-row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+                                aria-label="Delete transaction"
+                                onClick={() => setDeleteTransactionTarget(transaction)}
+                              >
+                                <Trash2Icon />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -220,15 +279,34 @@ export default function DashboardPage() {
         </div>
       </SidebarInset>
 
-      {hasAccounts && (
+      {hasAccounts && activeAccount && (
         <AddTransactionDialog
           open={addTransactionOpen}
           onOpenChange={setAddTransactionOpen}
-          accounts={accounts}
+          defaultAccountId={activeAccount.id}
           onSubmit={addTransaction}
           defaultDate={selectedIsoDate}
         />
       )}
+
+      <DeleteTransactionDialog
+        transaction={deleteTransactionTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTransactionTarget(null);
+        }}
+        onDeleted={() => setDeleteTransactionTarget(null)}
+      />
+
+      <DeleteAccountDialog
+        key={deleteTarget?.id}
+        account={deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onDeleted={createAccountDeletedHandler(accounts, activeAccount?.id, (accountId) =>
+          navigate({ search: (prev) => ({ ...prev, accountId }), replace: true }),
+        )}
+      />
     </SidebarProvider>
   );
 }
