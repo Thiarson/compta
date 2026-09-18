@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import autoload from '@fastify/autoload';
 import ajvErrors from 'ajv-errors';
 
+import type { FastifyServerOptions } from 'fastify';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 
 import envPlugin from './config/env.js';
@@ -12,9 +13,9 @@ import healthRoutes from './modules/health/health.route.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-async function buildServer() {
+async function buildServer(opts: Pick<FastifyServerOptions, 'logger'> = {}) {
   const app = fastify({
-    logger: {
+    logger: opts.logger ?? {
       level: 'info',
     },
     ajv: {
