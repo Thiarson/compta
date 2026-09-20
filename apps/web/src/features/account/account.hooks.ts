@@ -8,7 +8,7 @@ const accountKeys = {
   accounts: () => ['account'] as const,
 };
 
-const accountQueryOptions = queryOptions({
+export const accountQueryOptions = queryOptions({
   queryKey: accountKeys.accounts(),
   queryFn: accountApi.allAccounts,
 });
