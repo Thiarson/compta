@@ -3,6 +3,7 @@ import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
 import { buildAccountsRepository } from '../accounts/accounts.repository.js';
 import {
+  authCreatedResponseSchema,
   authResponseSchema,
   forgotPasswordBodySchema,
   forgotPasswordResponseSchema,
@@ -44,7 +45,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   app.post<RegisterRoute>(
     '/register',
     {
-      schema: { body: registerBodySchema, response: authResponseSchema },
+      schema: { body: registerBodySchema, response: authCreatedResponseSchema },
       config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
     },
     authController.register,

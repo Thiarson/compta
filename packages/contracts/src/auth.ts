@@ -137,14 +137,22 @@ const userSchema = Type.Object({
   emailVerifiedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
 });
 
+const authPayloadSchema = Type.Object({
+  accessToken: Type.String(),
+  user: userSchema,
+});
+
 export const authResponseSchema = {
-  200: Type.Object({
-    accessToken: Type.String(),
-    user: userSchema,
-  }),
+  200: authPayloadSchema,
+};
+
+export const authCreatedResponseSchema = {
+  201: authPayloadSchema,
 };
 
 export type AuthResponse = Static<(typeof authResponseSchema)[200]>;
+
+export type AuthCreatedResponse = Static<(typeof authCreatedResponseSchema)[201]>;
 
 export const meResponseSchema = {
   200: userSchema,

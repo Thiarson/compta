@@ -7,6 +7,7 @@ import type {
   LoginBody,
   RegisterBody,
   AuthResponse,
+  AuthCreatedResponse,
   MeResponse,
   VerifyEmailBody,
   ForgotPasswordBody,
@@ -29,7 +30,7 @@ export interface LoginRoute {
 
 export interface RegisterRoute {
   Body: RegisterBody;
-  Reply: AuthResponse;
+  Reply: AuthCreatedResponse;
 }
 
 export interface VerifyEmailRoute {
