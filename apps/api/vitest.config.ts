@@ -2,16 +2,22 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Workspace packages ship raw TS with `.js` import specifiers, which only Vitest can map to
+    // `.ts`. @fastify/autoload must be inlined too, or its `import()` of src/plugins/*.ts bypasses
+    // Vitest and Node fails on `@compta/db`.
+    server: { deps: { inline: [/@compta\//, '@fastify/autoload'] } },
     projects: [
       {
+        extends: true,
         test: { name: 'unit', environment: 'node', include: ['test/unit/**/*.test.ts'] },
       },
       {
+        extends: true,
         test: {
           name: 'integration',
           environment: 'node',
-          include: ['test/integration/**/*test.ts'],
-          globalSetup: ['./test/globalSetup.ts'],
+          include: ['test/integration/**/*.test.ts'],
+          globalSetup: ['./test/global-setup.ts'],
           setupFiles: ['./test/setup-env.ts'],
           fileParallelism: false, // all files share one database
           hookTimeout: 60_000, // first container start pulls the image
