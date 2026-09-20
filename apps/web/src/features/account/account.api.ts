@@ -7,10 +7,10 @@ import type {
 } from '@compta/contracts';
 
 export const accountApi = {
-  allAccounts: () => apiFetch<AllAccountsResponse>('/account'),
+  allAccounts: () => apiFetch<AllAccountsResponse>('/accounts'),
 
   createNewAccount: (body: CreateAccountBody) =>
-    apiFetch<CreateAccountResponse>('/account', { method: 'POST', body }),
+    apiFetch<CreateAccountResponse>('/accounts', { method: 'POST', body }),
 
-  deleteAccount: (id: string) => apiFetch<void>(`/account/${id}`, { method: 'DELETE' }),
+  deleteAccount: (id: string) => apiFetch<void>(`/accounts/${id}`, { method: 'DELETE' }),
 };

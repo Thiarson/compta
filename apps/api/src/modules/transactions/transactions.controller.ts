@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { buildTransactionsService } from './transaction.service.js';
+import type { buildTransactionsService } from './transactions.service.js';
 import type {
   AddTransactionBody,
   AddTransactionResponse,

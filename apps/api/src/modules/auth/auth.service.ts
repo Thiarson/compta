@@ -13,7 +13,7 @@ import type { Database } from '@compta/db';
 import type { EmailProvider } from '../../plugins/email.js';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
-import type { buildAccountsRepository } from '../account/account.repository.js';
+import type { buildAccountsRepository } from '../accounts/accounts.repository.js';
 
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;

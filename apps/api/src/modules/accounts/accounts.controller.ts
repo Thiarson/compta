@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { buildAccountsService } from './account.service.js';
+import type { buildAccountsService } from './accounts.service.js';
 import type {
   AllAccountsResponse,
   CreateAccountBody,

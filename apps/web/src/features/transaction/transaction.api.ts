@@ -7,10 +7,10 @@ import type {
 } from '@compta/contracts';
 
 export const transactionApi = {
-  allTransactions: () => apiFetch<AllTransactionResponse>('/transaction'),
+  allTransactions: () => apiFetch<AllTransactionResponse>('/transactions'),
 
   createNewTransaction: (body: AddTransactionBody) =>
-    apiFetch<AddTransactionResponse>('/transaction', { method: 'POST', body }),
+    apiFetch<AddTransactionResponse>('/transactions', { method: 'POST', body }),
 
-  deleteTransaction: (id: string) => apiFetch<void>(`/transaction/${id}`, { method: 'DELETE' }),
+  deleteTransaction: (id: string) => apiFetch<void>(`/transactions/${id}`, { method: 'DELETE' }),
 };

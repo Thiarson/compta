@@ -1,6 +1,6 @@
 import { NotFoundError, ConflictError } from '../../utils/http-error.js';
 
-import type { buildAccountsRepository } from './account.repository.js';
+import type { buildAccountsRepository } from './accounts.repository.js';
 
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
 

@@ -1,7 +1,7 @@
 import { buildAuthService } from './auth.service.js';
 import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
-import { buildAccountsRepository } from '../account/account.repository.js';
+import { buildAccountsRepository } from '../accounts/accounts.repository.js';
 import {
   authResponseSchema,
   forgotPasswordBodySchema,

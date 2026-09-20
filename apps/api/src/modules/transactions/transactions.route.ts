@@ -4,16 +4,16 @@ import {
   allTransactionResponseSchema,
   deleteTransactionParamsSchema,
 } from '@compta/contracts';
-import { buildTransactionsRepository } from './transaction.repository.js';
-import { buildTransactionsController } from './transaction.controller.js';
-import { buildTransactionsService } from './transaction.service.js';
+import { buildTransactionsRepository } from './transactions.repository.js';
+import { buildTransactionsController } from './transactions.controller.js';
+import { buildTransactionsService } from './transactions.service.js';
 
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import type {
   AddTransactionRoute,
   AllTransactionsRoute,
   DeleteTransactionRoute,
-} from './transaction.controller.js';
+} from './transactions.controller.js';
 
 const transactionsRoute: FastifyPluginAsyncTypebox = async (app) => {
   const transactionsRepository = buildTransactionsRepository(app.db);
