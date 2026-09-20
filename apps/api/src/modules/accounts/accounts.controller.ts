@@ -5,6 +5,7 @@ import type {
   CreateAccountBody,
   CreateAccountResponse,
   DeleteAccountParams,
+  DeleteAccountResponse,
 } from '@compta/contracts';
 
 type AccountsService = ReturnType<typeof buildAccountsService>;
@@ -20,7 +21,7 @@ export interface CreateAccountRoute {
 
 export interface DeleteAccountRoute {
   Params: DeleteAccountParams;
-  Reply: void;
+  Reply: DeleteAccountResponse;
 }
 
 export function buildAccountsController(accountsService: AccountsService) {

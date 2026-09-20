@@ -3,6 +3,7 @@ import {
   addTransactionResponseSchema,
   allTransactionResponseSchema,
   deleteTransactionParamsSchema,
+  deleteTransactionResponseSchema,
 } from '@compta/contracts';
 import { buildTransactionsRepository } from './transactions.repository.js';
 import { buildTransactionsController } from './transactions.controller.js';
@@ -41,7 +42,7 @@ const transactionsRoute: FastifyPluginAsyncTypebox = async (app) => {
   app.delete<DeleteTransactionRoute>(
     '/:id',
     {
-      schema: { params: deleteTransactionParamsSchema },
+      schema: { params: deleteTransactionParamsSchema, response: deleteTransactionResponseSchema },
       preHandler: [app.authenticate],
     },
     transactionsController.deleteTransaction,

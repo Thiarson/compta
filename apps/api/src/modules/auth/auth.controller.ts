@@ -12,6 +12,12 @@ import type {
   ForgotPasswordBody,
   VerifyPasswordResetBody,
   ResetPasswordBody,
+  VerifyEmailResponse,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+  VerifyPasswordResetResponse,
+  ResendVerificationResponse,
+  LogoutResponse,
 } from '@compta/contracts';
 
 type AuthService = ReturnType<typeof buildAuthService>;
@@ -28,18 +34,22 @@ export interface RegisterRoute {
 
 export interface VerifyEmailRoute {
   Body: VerifyEmailBody;
+  Reply: VerifyEmailResponse;
 }
 
 export interface ForgotPasswordRoute {
   Body: ForgotPasswordBody;
+  Reply: ForgotPasswordResponse;
 }
 
 export interface VerifyPasswordResetRoute {
   Body: VerifyPasswordResetBody;
+  Reply: VerifyPasswordResetResponse;
 }
 
 export interface ResetPasswordRoute {
   Body: ResetPasswordBody;
+  Reply: ResetPasswordResponse;
 }
 
 export interface RefreshRoute {
@@ -50,8 +60,12 @@ export interface MeRoute {
   Reply: MeResponse;
 }
 
-export interface EmptyRoute {
-  Reply: void;
+export interface ResendVerificationRoute {
+  Reply: ResendVerificationResponse;
+}
+
+export interface LogoutRoute {
+  Reply: LogoutResponse;
 }
 
 async function signPairTokens(reply: FastifyReply, userId: string) {
@@ -117,7 +131,10 @@ export function buildAuthController(authService: AuthService) {
       });
     },
 
-    async resendVerification(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+    async resendVerification(
+      request: FastifyRequest<ResendVerificationRoute>,
+      reply: FastifyReply<ResendVerificationRoute>,
+    ) {
       const { sub: userId } = request.accessTokenPayload!;
       await authService.resendVerification(userId);
 
@@ -203,7 +220,7 @@ export function buildAuthController(authService: AuthService) {
       });
     },
 
-    async logout(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+    async logout(request: FastifyRequest<LogoutRoute>, reply: FastifyReply<LogoutRoute>) {
       const refreshToken = request.cookies[REFRESH_COOKIE_NAME];
       if (refreshToken) {
         await authService.revokeRefreshToken(refreshToken);

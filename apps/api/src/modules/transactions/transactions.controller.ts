@@ -5,6 +5,7 @@ import type {
   AddTransactionResponse,
   AllTransactionResponse,
   DeleteTransactionParams,
+  DeleteTransactionResponse,
 } from '@compta/contracts';
 
 type TransactionService = ReturnType<typeof buildTransactionsService>;
@@ -20,7 +21,7 @@ export interface AddTransactionRoute {
 
 export interface DeleteTransactionRoute {
   Params: DeleteTransactionParams;
-  Reply: void;
+  Reply: DeleteTransactionResponse;
 }
 
 export function buildTransactionsController(transactionsService: TransactionService) {

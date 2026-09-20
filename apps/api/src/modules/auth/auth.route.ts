@@ -5,21 +5,28 @@ import { buildAccountsRepository } from '../accounts/accounts.repository.js';
 import {
   authResponseSchema,
   forgotPasswordBodySchema,
+  forgotPasswordResponseSchema,
   loginBodySchema,
+  logoutResponseSchema,
   meResponseSchema,
   registerBodySchema,
+  resendVerificationResponseSchema,
   resetPasswordBodySchema,
+  resetPasswordResponseSchema,
   verifyEmailBodySchema,
+  verifyEmailResponseSchema,
   verifyPasswordResetBodySchema,
+  verifyPasswordResetResponseSchema,
 } from '@compta/contracts';
 
 import type {
-  EmptyRoute,
   ForgotPasswordRoute,
   LoginRoute,
+  LogoutRoute,
   MeRoute,
   RefreshRoute,
   RegisterRoute,
+  ResendVerificationRoute,
   ResetPasswordRoute,
   VerifyEmailRoute,
   VerifyPasswordResetRoute,
@@ -46,9 +53,10 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     authController.login,
   );
 
-  app.post<EmptyRoute>(
+  app.post<ResendVerificationRoute>(
     '/resend-verification',
     {
+      schema: { response: resendVerificationResponseSchema },
       preHandler: [app.authenticate],
       config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
     },
@@ -57,14 +65,14 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post<VerifyEmailRoute>(
     '/verify-email',
-    { schema: { body: verifyEmailBodySchema } },
+    { schema: { body: verifyEmailBodySchema, response: verifyEmailResponseSchema } },
     authController.verifyEmail,
   );
 
   app.post<ForgotPasswordRoute>(
     '/forgot-password',
     {
-      schema: { body: forgotPasswordBodySchema },
+      schema: { body: forgotPasswordBodySchema, response: forgotPasswordResponseSchema },
       config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
     },
     authController.forgotPassword,
@@ -72,13 +80,18 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post<VerifyPasswordResetRoute>(
     '/verify-password-reset',
-    { schema: { body: verifyPasswordResetBodySchema } },
+    {
+      schema: {
+        body: verifyPasswordResetBodySchema,
+        response: verifyPasswordResetResponseSchema,
+      },
+    },
     authController.verifyPasswordReset,
   );
 
   app.post<ResetPasswordRoute>(
     '/reset-password',
-    { schema: { body: resetPasswordBodySchema } },
+    { schema: { body: resetPasswordBodySchema, response: resetPasswordResponseSchema } },
     authController.resetPassword,
   );
 
@@ -94,7 +107,11 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     authController.me,
   );
 
-  app.post<EmptyRoute>('/logout', authController.logout);
+  app.post<LogoutRoute>(
+    '/logout',
+    { schema: { response: logoutResponseSchema } },
+    authController.logout,
+  );
 };
 
 export default authRoute;

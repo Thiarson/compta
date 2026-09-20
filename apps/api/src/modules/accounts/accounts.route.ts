@@ -4,6 +4,7 @@ import {
   createAccountBodySchema,
   createAccountResponseSchema,
   deleteAccountParamsSchema,
+  deleteAccountResponseSchema,
 } from '@compta/contracts';
 import { buildAccountsController } from './accounts.controller.js';
 import { buildAccountsRepository } from './accounts.repository.js';
@@ -41,7 +42,7 @@ const accountsRoute: FastifyPluginAsyncTypebox = async (app) => {
   app.delete<DeleteAccountRoute>(
     '/:id',
     {
-      schema: { params: deleteAccountParamsSchema },
+      schema: { params: deleteAccountParamsSchema, response: deleteAccountResponseSchema },
       preHandler: [app.authenticate],
     },
     accountsController.deleteAccount,
