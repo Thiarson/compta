@@ -8,6 +8,15 @@ import {
 
 import type { FastifyError } from 'fastify';
 
+const CODE_BY_STATUS: Record<number, string> = {
+  400: 'BAD_REQUEST',
+  401: 'UNAUTHORIZED',
+  403: 'FORBIDDEN',
+  404: 'NOT_FOUND',
+  409: 'CONFLICT',
+  429: 'TOO_MANY_REQUESTS',
+};
+
 export default fp(async function errorHandlerPlugin(app) {
   app.setNotFoundHandler((request) => {
     throw new NotFoundError(`Route ${request.method} ${request.url} not found`);
@@ -35,7 +44,7 @@ export default fp(async function errorHandlerPlugin(app) {
     if (typeof error.statusCode === 'number' && error.statusCode < 500) {
       return reply.status(error.statusCode).send({
         statusCode: error.statusCode,
-        code: error.code,
+        code: CODE_BY_STATUS[error.statusCode] ?? error.code ?? 'BAD_REQUEST',
         message: error.message,
       });
     }

@@ -1,4 +1,6 @@
-import { Type, type Static } from '@sinclair/typebox';
+import { Null, Type } from '@sinclair/typebox';
+
+import type { Static } from '@sinclair/typebox';
 
 export const registerBodySchema = Type.Object(
   {
@@ -58,6 +60,12 @@ export const verifyEmailBodySchema = Type.Object(
 
 export type VerifyEmailBody = Static<typeof verifyEmailBodySchema>;
 
+export const verifyEmailResponseSchema = {
+  204: Null(),
+};
+
+export type VerifyEmailResponse = Static<(typeof verifyEmailResponseSchema)[204]>;
+
 export const forgotPasswordBodySchema = Type.Object(
   {
     email: Type.String({ format: 'email', errorMessage: { format: 'Invalid email address' } }),
@@ -71,6 +79,12 @@ export const forgotPasswordBodySchema = Type.Object(
 
 export type ForgotPasswordBody = Static<typeof forgotPasswordBodySchema>;
 
+export const forgotPasswordResponseSchema = {
+  204: Null(),
+};
+
+export type ForgotPasswordResponse = Static<(typeof forgotPasswordResponseSchema)[204]>;
+
 export const verifyPasswordResetBodySchema = Type.Object(
   {
     passwordResetToken: Type.String(),
@@ -83,6 +97,12 @@ export const verifyPasswordResetBodySchema = Type.Object(
 );
 
 export type VerifyPasswordResetBody = Static<typeof verifyPasswordResetBodySchema>;
+
+export const verifyPasswordResetResponseSchema = {
+  204: Null(),
+};
+
+export type VerifyPasswordResetResponse = Static<(typeof verifyPasswordResetResponseSchema)[204]>;
 
 export const resetPasswordBodySchema = Type.Object(
   {
@@ -104,6 +124,12 @@ export const resetPasswordBodySchema = Type.Object(
 
 export type ResetPasswordBody = Static<typeof resetPasswordBodySchema>;
 
+export const resetPasswordResponseSchema = {
+  204: Null(),
+};
+
+export type ResetPasswordResponse = Static<(typeof resetPasswordResponseSchema)[204]>;
+
 const userSchema = Type.Object({
   id: Type.String(),
   username: Type.String(),
@@ -111,17 +137,37 @@ const userSchema = Type.Object({
   emailVerifiedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
 });
 
+const authPayloadSchema = Type.Object({
+  accessToken: Type.String(),
+  user: userSchema,
+});
+
 export const authResponseSchema = {
-  200: Type.Object({
-    accessToken: Type.String(),
-    user: userSchema,
-  }),
+  200: authPayloadSchema,
+};
+
+export const authCreatedResponseSchema = {
+  201: authPayloadSchema,
 };
 
 export type AuthResponse = Static<(typeof authResponseSchema)[200]>;
+
+export type AuthCreatedResponse = Static<(typeof authCreatedResponseSchema)[201]>;
 
 export const meResponseSchema = {
   200: userSchema,
 };
 
 export type MeResponse = Static<(typeof meResponseSchema)[200]>;
+
+export const resendVerificationResponseSchema = {
+  202: Null(),
+};
+
+export type ResendVerificationResponse = Static<(typeof resendVerificationResponseSchema)[202]>;
+
+export const logoutResponseSchema = {
+  204: Null(),
+};
+
+export type LogoutResponse = Static<(typeof logoutResponseSchema)[204]>;

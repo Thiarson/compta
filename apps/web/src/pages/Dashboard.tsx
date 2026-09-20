@@ -11,14 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import { DeleteTransactionDialog } from '@/components/delete-transaction-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,18 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { createAccountDeletedHandler, useAccount } from '@/features/account/account.hooks';
+import { useAccount } from '@/features/account/account.hooks';
 import {
   useCreateTransaction,
   useTransactions,
   type Transaction,
 } from '@/features/transaction/transaction.hooks';
 import { cn, formatCurrency, isSameDay, toIsoDate } from '@/lib/utils';
-import { getRouteApi } from '@tanstack/react-router';
+import { useParams } from '@tanstack/react-router';
 import {
   ArrowDownCircleIcon,
   ArrowUpCircleIcon,
-  EllipsisVerticalIcon,
   PlusIcon,
   ReceiptTextIcon,
   ScaleIcon,
@@ -49,15 +41,11 @@ import {
   WalletIcon,
 } from 'lucide-react';
 
-import type { AllAccountsResponse } from '@compta/contracts';
-
 const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
   month: 'long',
   day: 'numeric',
 });
-
-const routeApi = getRouteApi('/_authenticated/');
 
 export default function DashboardPage() {
   const { data: accounts, isPending } = useAccount();
@@ -65,24 +53,16 @@ export default function DashboardPage() {
   const { mutate: addTransaction } = useCreateTransaction();
   const [addTransactionOpen, setAddTransactionOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(() => new Date());
-  const [deleteTarget, setDeleteTarget] = React.useState<AllAccountsResponse[number] | null>(null);
   const [deleteTransactionTarget, setDeleteTransactionTarget] = React.useState<Transaction | null>(
     null,
   );
 
-  const { accountId } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+  const { accountId } = useParams({ strict: false });
 
   const hasAccounts = !isPending && accounts && accounts.length > 0;
   const activeAccount = hasAccounts
     ? (accounts.find((account) => account.id === accountId) ?? accounts[0])
     : undefined;
-
-  React.useEffect(() => {
-    if (hasAccounts && activeAccount && accountId !== activeAccount.id) {
-      navigate({ search: (prev) => ({ ...prev, accountId: activeAccount.id }), replace: true });
-    }
-  }, [hasAccounts, activeAccount, accountId, navigate]);
 
   const transactions = activeAccount
     ? allTransactions.filter((transaction) => transaction.accountId === activeAccount.id)
@@ -124,24 +104,6 @@ export default function DashboardPage() {
                   <PlusIcon />
                   Add transaction
                 </Button>
-                {accounts.length > 1 && activeAccount && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={<Button variant="ghost" size="icon" aria-label="Account options" />}
-                    >
-                      <EllipsisVerticalIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeleteTarget(activeAccount)}
-                      >
-                        <Trash2Icon />
-                        Delete account
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </div>
             )}
           </div>
@@ -295,17 +257,6 @@ export default function DashboardPage() {
           if (!open) setDeleteTransactionTarget(null);
         }}
         onDeleted={() => setDeleteTransactionTarget(null)}
-      />
-
-      <DeleteAccountDialog
-        key={deleteTarget?.id}
-        account={deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        onDeleted={createAccountDeletedHandler(accounts, activeAccount?.id, (accountId) =>
-          navigate({ search: (prev) => ({ ...prev, accountId }), replace: true }),
-        )}
       />
     </SidebarProvider>
   );

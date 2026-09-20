@@ -7,11 +7,18 @@ import type {
   LoginBody,
   RegisterBody,
   AuthResponse,
+  AuthCreatedResponse,
   MeResponse,
   VerifyEmailBody,
   ForgotPasswordBody,
   VerifyPasswordResetBody,
   ResetPasswordBody,
+  VerifyEmailResponse,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+  VerifyPasswordResetResponse,
+  ResendVerificationResponse,
+  LogoutResponse,
 } from '@compta/contracts';
 
 type AuthService = ReturnType<typeof buildAuthService>;
@@ -23,23 +30,27 @@ export interface LoginRoute {
 
 export interface RegisterRoute {
   Body: RegisterBody;
-  Reply: AuthResponse;
+  Reply: AuthCreatedResponse;
 }
 
 export interface VerifyEmailRoute {
   Body: VerifyEmailBody;
+  Reply: VerifyEmailResponse;
 }
 
 export interface ForgotPasswordRoute {
   Body: ForgotPasswordBody;
+  Reply: ForgotPasswordResponse;
 }
 
 export interface VerifyPasswordResetRoute {
   Body: VerifyPasswordResetBody;
+  Reply: VerifyPasswordResetResponse;
 }
 
 export interface ResetPasswordRoute {
   Body: ResetPasswordBody;
+  Reply: ResetPasswordResponse;
 }
 
 export interface RefreshRoute {
@@ -50,8 +61,12 @@ export interface MeRoute {
   Reply: MeResponse;
 }
 
-export interface EmptyRoute {
-  Reply: void;
+export interface ResendVerificationRoute {
+  Reply: ResendVerificationResponse;
+}
+
+export interface LogoutRoute {
+  Reply: LogoutResponse;
 }
 
 async function signPairTokens(reply: FastifyReply, userId: string) {
@@ -86,7 +101,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      return {
+      return reply.code(201).send({
         accessToken,
         user: {
           id: user.id,
@@ -94,7 +109,7 @@ export function buildAuthController(authService: AuthService) {
           email: user.email,
           emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
-      };
+      });
     },
 
     async login(request: FastifyRequest<LoginRoute>, reply: FastifyReply<LoginRoute>) {
@@ -106,7 +121,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      reply.send({
+      return reply.send({
         accessToken,
         user: {
           id: user.id,
@@ -117,11 +132,14 @@ export function buildAuthController(authService: AuthService) {
       });
     },
 
-    async resendVerification(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+    async resendVerification(
+      request: FastifyRequest<ResendVerificationRoute>,
+      reply: FastifyReply<ResendVerificationRoute>,
+    ) {
       const { sub: userId } = request.accessTokenPayload!;
       await authService.resendVerification(userId);
 
-      reply.status(202).send();
+      return reply.status(202).send();
     },
 
     async verifyEmail(
@@ -130,7 +148,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.verifyEmailToken(request.body.verificationToken);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async forgotPassword(
@@ -139,7 +157,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.forgotPassword(request.body.email);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async verifyPasswordReset(
@@ -148,7 +166,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.verifyPasswordResetToken(request.body.passwordResetToken);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async resetPassword(
@@ -157,7 +175,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.resetPassword(request.body.passwordResetToken, request.body.newPassword);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async refresh(request: FastifyRequest<RefreshRoute>, reply: FastifyReply<RefreshRoute>) {
@@ -180,7 +198,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      reply.send({
+      return reply.send({
         accessToken,
         user: {
           id: user.id,
@@ -195,7 +213,7 @@ export function buildAuthController(authService: AuthService) {
       const { sub: userId } = request.accessTokenPayload!;
       const user = await authService.getCurrentUser(userId);
 
-      reply.send({
+      return reply.send({
         id: user.id,
         username: user.username,
         email: user.email,
@@ -203,14 +221,14 @@ export function buildAuthController(authService: AuthService) {
       });
     },
 
-    async logout(request: FastifyRequest<EmptyRoute>, reply: FastifyReply<EmptyRoute>) {
+    async logout(request: FastifyRequest<LogoutRoute>, reply: FastifyReply<LogoutRoute>) {
       const refreshToken = request.cookies[REFRESH_COOKIE_NAME];
       if (refreshToken) {
         await authService.revokeRefreshToken(refreshToken);
       }
 
       reply.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
-      reply.status(204).send();
+      return reply.status(204).send();
     },
   };
 }

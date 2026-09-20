@@ -1,10 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { buildAccountsService } from './account.service.js';
+import type { buildAccountsService } from './accounts.service.js';
 import type {
   AllAccountsResponse,
   CreateAccountBody,
   CreateAccountResponse,
   DeleteAccountParams,
+  DeleteAccountResponse,
 } from '@compta/contracts';
 
 type AccountsService = ReturnType<typeof buildAccountsService>;
@@ -20,7 +21,7 @@ export interface CreateAccountRoute {
 
 export interface DeleteAccountRoute {
   Params: DeleteAccountParams;
-  Reply: void;
+  Reply: DeleteAccountResponse;
 }
 
 export function buildAccountsController(accountsService: AccountsService) {
@@ -33,7 +34,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       const accounts = await accountsService.getAllUserAccounts(userId);
 
-      reply.send(accounts);
+      return reply.send(accounts);
     },
 
     async createAccount(
@@ -44,7 +45,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       const newAccount = await accountsService.createNewAccount(userId, request.body.category);
 
-      reply.send({
+      return reply.code(201).send({
         id: newAccount.id,
         category: newAccount.category,
       });
@@ -58,7 +59,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       await accountsService.deleteAccount(userId, request.params.id);
 
-      reply.code(204).send();
+      return reply.code(204).send();
     },
   };
 }

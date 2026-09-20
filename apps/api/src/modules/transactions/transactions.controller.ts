@@ -1,10 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { buildTransactionsService } from './transaction.service.js';
+import type { buildTransactionsService } from './transactions.service.js';
 import type {
   AddTransactionBody,
   AddTransactionResponse,
   AllTransactionResponse,
   DeleteTransactionParams,
+  DeleteTransactionResponse,
 } from '@compta/contracts';
 
 type TransactionService = ReturnType<typeof buildTransactionsService>;
@@ -20,7 +21,7 @@ export interface AddTransactionRoute {
 
 export interface DeleteTransactionRoute {
   Params: DeleteTransactionParams;
-  Reply: void;
+  Reply: DeleteTransactionResponse;
 }
 
 export function buildTransactionsController(transactionsService: TransactionService) {
@@ -32,7 +33,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
       const { sub: userId } = request.accessTokenPayload!;
       const transactions = await transactionsService.getAllUserTransactions(userId);
 
-      reply.send(
+      return reply.send(
         transactions.map((t) => ({
           id: t.id,
           accountId: t.accountId,
@@ -60,7 +61,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
         date,
       });
 
-      reply.code(201).send({
+      return reply.code(201).send({
         id: transaction.id,
         accountId: transaction.accountId,
         type: transaction.type,
@@ -79,7 +80,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
 
       await transactionsService.deleteTransaction(userId, request.params.id);
 
-      reply.code(204).send();
+      return reply.code(204).send();
     },
   };
 }

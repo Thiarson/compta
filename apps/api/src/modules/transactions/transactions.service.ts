@@ -1,7 +1,7 @@
 import { NotFoundError } from '../../utils/http-error.js';
 
 import type { AddTransactionBody } from '@compta/contracts';
-import type { buildTransactionsRepository } from './transaction.repository.js';
+import type { buildTransactionsRepository } from './transactions.repository.js';
 
 type TransactionsRepository = ReturnType<typeof buildTransactionsRepository>;
 

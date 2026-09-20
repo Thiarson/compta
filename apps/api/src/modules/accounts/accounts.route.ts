@@ -1,18 +1,19 @@
-import { buildAccountsService } from './account.service.js';
+import { buildAccountsService } from './accounts.service.js';
 import {
   allAccountsResponseSchema,
   createAccountBodySchema,
   createAccountResponseSchema,
   deleteAccountParamsSchema,
+  deleteAccountResponseSchema,
 } from '@compta/contracts';
-import { buildAccountsController } from './account.controller.js';
-import { buildAccountsRepository } from './account.repository.js';
+import { buildAccountsController } from './accounts.controller.js';
+import { buildAccountsRepository } from './accounts.repository.js';
 
 import type {
   AllAccountsRoute,
   CreateAccountRoute,
   DeleteAccountRoute,
-} from './account.controller.js';
+} from './accounts.controller.js';
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
 const accountsRoute: FastifyPluginAsyncTypebox = async (app) => {
@@ -41,7 +42,7 @@ const accountsRoute: FastifyPluginAsyncTypebox = async (app) => {
   app.delete<DeleteAccountRoute>(
     '/:id',
     {
-      schema: { params: deleteAccountParamsSchema },
+      schema: { params: deleteAccountParamsSchema, response: deleteAccountResponseSchema },
       preHandler: [app.authenticate],
     },
     accountsController.deleteAccount,

@@ -1,12 +1,13 @@
 import { Type, type Static } from '@sinclair/typebox';
+import { idParamsSchema, noContentResponseSchema } from './common.js';
 
 export const transactionTypes = ['income', 'expense'] as const;
 
 export type TransactionType = (typeof transactionTypes)[number];
 
 export const transactionSchema = Type.Object({
-  id: Type.String(),
-  accountId: Type.String(),
+  id: Type.String({ format: 'uuid' }),
+  accountId: Type.String({ format: 'uuid' }),
   type: Type.Union(transactionTypes.map((type) => Type.Literal(type))),
   amount: Type.Number(),
   description: Type.Union([Type.String(), Type.Null()]),
@@ -16,7 +17,7 @@ export const transactionSchema = Type.Object({
 
 export const addTransactionBodySchema = Type.Object(
   {
-    accountId: Type.String(),
+    accountId: Type.String({ format: 'uuid', errorMessage: { format: 'Invalid account id' } }),
     type: Type.Union(
       transactionTypes.map((type) => Type.Literal(type)),
       { errorMessage: 'Type must be either income or expense' },
@@ -62,8 +63,12 @@ export const allTransactionResponseSchema = {
 
 export type AllTransactionResponse = Static<(typeof allTransactionResponseSchema)[200]>;
 
-export const deleteTransactionParamsSchema = Type.Object({
-  id: Type.String(),
-});
+export const deleteTransactionParamsSchema = idParamsSchema;
 
 export type DeleteTransactionParams = Static<typeof deleteTransactionParamsSchema>;
+
+export const deleteTransactionResponseSchema = {
+  204: noContentResponseSchema,
+};
+
+export type DeleteTransactionResponse = Static<(typeof deleteTransactionResponseSchema)[204]>;

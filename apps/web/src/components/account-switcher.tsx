@@ -30,7 +30,7 @@ import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { ChevronsUpDownIcon, PlusIcon, Trash2Icon, WalletIcon } from 'lucide-react';
-import { getRouteApi } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import {
   createAccountDeletedHandler,
   useAccount,
@@ -39,8 +39,6 @@ import {
 
 import type { AllAccountsResponse } from '@compta/contracts';
 import type { SubmitEvent } from 'react';
-
-const routeApi = getRouteApi('/_authenticated/');
 
 function AddAccountDialog({
   open,
@@ -113,8 +111,8 @@ function AddAccountDialog({
 export function AccountSwitcher() {
   const { isMobile } = useSidebar();
   const { data: accounts, isPending } = useAccount();
-  const { accountId } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+  const { accountId } = useParams({ strict: false });
+  const navigate = useNavigate();
   const [addAccountOpen, setAddAccountOpen] = React.useState(false);
   const [addAccountKey, setAddAccountKey] = React.useState(0);
   const [deleteTarget, setDeleteTarget] = React.useState<AllAccountsResponse[number] | null>(null);
@@ -128,7 +126,7 @@ export function AccountSwitcher() {
   const activeAccount = accounts.find((account) => account.id === accountId) ?? accounts[0];
 
   function selectAccount(id: string) {
-    navigate({ search: (prev) => ({ ...prev, accountId: id }), replace: true });
+    navigate({ to: '/accounts/$accountId', params: { accountId: id } });
   }
 
   return (

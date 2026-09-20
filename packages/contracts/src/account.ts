@@ -1,7 +1,8 @@
 import { Type, type Static } from '@sinclair/typebox';
+import { idParamsSchema, noContentResponseSchema } from './common.js';
 
 const accountSchema = Type.Object({
-  id: Type.String(),
+  id: Type.String({ format: 'uuid' }),
   category: Type.String(),
 });
 
@@ -34,8 +35,12 @@ export const createAccountResponseSchema = {
 
 export type CreateAccountResponse = Static<(typeof createAccountResponseSchema)[201]>;
 
-export const deleteAccountParamsSchema = Type.Object({
-  id: Type.String(),
-});
+export const deleteAccountParamsSchema = idParamsSchema;
 
 export type DeleteAccountParams = Static<typeof deleteAccountParamsSchema>;
+
+export const deleteAccountResponseSchema = {
+  204: noContentResponseSchema,
+};
+
+export type DeleteAccountResponse = Static<(typeof deleteAccountResponseSchema)[204]>;
