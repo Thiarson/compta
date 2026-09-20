@@ -33,7 +33,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
       const { sub: userId } = request.accessTokenPayload!;
       const transactions = await transactionsService.getAllUserTransactions(userId);
 
-      reply.send(
+      return reply.send(
         transactions.map((t) => ({
           id: t.id,
           accountId: t.accountId,
@@ -61,7 +61,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
         date,
       });
 
-      reply.code(201).send({
+      return reply.code(201).send({
         id: transaction.id,
         accountId: transaction.accountId,
         type: transaction.type,
@@ -80,7 +80,7 @@ export function buildTransactionsController(transactionsService: TransactionServ
 
       await transactionsService.deleteTransaction(userId, request.params.id);
 
-      reply.code(204).send();
+      return reply.code(204).send();
     },
   };
 }

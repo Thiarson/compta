@@ -34,7 +34,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       const accounts = await accountsService.getAllUserAccounts(userId);
 
-      reply.send(accounts);
+      return reply.send(accounts);
     },
 
     async createAccount(
@@ -45,7 +45,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       const newAccount = await accountsService.createNewAccount(userId, request.body.category);
 
-      reply.code(201).send({
+      return reply.code(201).send({
         id: newAccount.id,
         category: newAccount.category,
       });
@@ -59,7 +59,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       await accountsService.deleteAccount(userId, request.params.id);
 
-      reply.code(204).send();
+      return reply.code(204).send();
     },
   };
 }

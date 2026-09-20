@@ -100,7 +100,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      reply.code(201).send({
+      return reply.code(201).send({
         accessToken,
         user: {
           id: user.id,
@@ -120,7 +120,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      reply.send({
+      return reply.send({
         accessToken,
         user: {
           id: user.id,
@@ -138,7 +138,7 @@ export function buildAuthController(authService: AuthService) {
       const { sub: userId } = request.accessTokenPayload!;
       await authService.resendVerification(userId);
 
-      reply.status(202).send();
+      return reply.status(202).send();
     },
 
     async verifyEmail(
@@ -147,7 +147,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.verifyEmailToken(request.body.verificationToken);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async forgotPassword(
@@ -156,7 +156,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.forgotPassword(request.body.email);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async verifyPasswordReset(
@@ -165,7 +165,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.verifyPasswordResetToken(request.body.passwordResetToken);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async resetPassword(
@@ -174,7 +174,7 @@ export function buildAuthController(authService: AuthService) {
     ) {
       await authService.resetPassword(request.body.passwordResetToken, request.body.newPassword);
 
-      reply.status(204).send();
+      return reply.status(204).send();
     },
 
     async refresh(request: FastifyRequest<RefreshRoute>, reply: FastifyReply<RefreshRoute>) {
@@ -197,7 +197,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      reply.send({
+      return reply.send({
         accessToken,
         user: {
           id: user.id,
@@ -212,7 +212,7 @@ export function buildAuthController(authService: AuthService) {
       const { sub: userId } = request.accessTokenPayload!;
       const user = await authService.getCurrentUser(userId);
 
-      reply.send({
+      return reply.send({
         id: user.id,
         username: user.username,
         email: user.email,
@@ -227,7 +227,7 @@ export function buildAuthController(authService: AuthService) {
       }
 
       reply.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
-      reply.status(204).send();
+      return reply.status(204).send();
     },
   };
 }

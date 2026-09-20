@@ -43,13 +43,19 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post<RegisterRoute>(
     '/register',
-    { schema: { body: registerBodySchema, response: authResponseSchema } },
+    {
+      schema: { body: registerBodySchema, response: authResponseSchema },
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+    },
     authController.register,
   );
 
   app.post<LoginRoute>(
     '/login',
-    { schema: { body: loginBodySchema, response: authResponseSchema } },
+    {
+      schema: { body: loginBodySchema, response: authResponseSchema },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
     authController.login,
   );
 
@@ -91,7 +97,10 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
 
   app.post<ResetPasswordRoute>(
     '/reset-password',
-    { schema: { body: resetPasswordBodySchema, response: resetPasswordResponseSchema } },
+    {
+      schema: { body: resetPasswordBodySchema, response: resetPasswordResponseSchema },
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+    },
     authController.resetPassword,
   );
 
