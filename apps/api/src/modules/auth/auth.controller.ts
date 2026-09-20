@@ -86,7 +86,7 @@ export function buildAuthController(authService: AuthService) {
 
       setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
 
-      return {
+      reply.code(201).send({
         accessToken,
         user: {
           id: user.id,
@@ -94,7 +94,7 @@ export function buildAuthController(authService: AuthService) {
           email: user.email,
           emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         },
-      };
+      });
     },
 
     async login(request: FastifyRequest<LoginRoute>, reply: FastifyReply<LoginRoute>) {

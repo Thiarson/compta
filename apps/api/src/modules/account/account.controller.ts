@@ -44,7 +44,7 @@ export function buildAccountsController(accountsService: AccountsService) {
 
       const newAccount = await accountsService.createNewAccount(userId, request.body.category);
 
-      reply.send({
+      reply.code(201).send({
         id: newAccount.id,
         category: newAccount.category,
       });
