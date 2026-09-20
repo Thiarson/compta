@@ -23,7 +23,10 @@ export function buildTransactionsRepository(db: Database['db']) {
           isNull(transactions.deletedAt),
           inArray(
             transactions.accountId,
-            db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(and(eq(accounts.userId, userId), eq(accounts.isActive, true))),
           ),
         ),
         orderBy: (t, { desc }) => [desc(t.date), desc(t.createdAt)],
@@ -46,7 +49,10 @@ export function buildTransactionsRepository(db: Database['db']) {
           isNull(transactions.deletedAt),
           inArray(
             transactions.accountId,
-            db.select({ id: accounts.id }).from(accounts).where(eq(accounts.userId, userId)),
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(and(eq(accounts.userId, userId), eq(accounts.isActive, true))),
           ),
         ),
         columns: { id: true },

@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { accounts } from '@compta/db';
+import { and, eq, isNull } from 'drizzle-orm';
+import { accounts, transactions } from '@compta/db';
 
 import type { Database, DbTransaction, NewAccount } from '@compta/db';
 
@@ -47,10 +47,19 @@ export function buildAccountsRepository(db: Database['db']) {
     },
 
     async softDeleteById(id: string) {
-      await db
-        .update(accounts)
-        .set({ isActive: false, deletedAt: new Date() })
-        .where(eq(accounts.id, id));
+      const now = new Date();
+
+      await db.transaction(async (tx) => {
+        await tx
+          .update(transactions)
+          .set({ deletedAt: now })
+          .where(and(eq(transactions.accountId, id), isNull(transactions.deletedAt)));
+
+        await tx
+          .update(accounts)
+          .set({ isActive: false, deletedAt: now })
+          .where(eq(accounts.id, id));
+      });
     },
   };
 }
