@@ -1,4 +1,5 @@
 import { daysToMs } from '../../utils/time.js';
+import { normalizeEmail } from '../../utils/email.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import {
@@ -74,7 +75,8 @@ export function buildAuthService(
   }
 
   return {
-    async register({ username, email, password }: RegisterBody) {
+    async register({ username, email: rawEmail, password }: RegisterBody) {
+      const email = normalizeEmail(rawEmail);
       const existing = await authRepository.findUserByEmail(email);
       if (existing) {
         throw new ConflictError('Email already in use');
@@ -101,7 +103,7 @@ export function buildAuthService(
     },
 
     async validateCredentials({ email, password }: LoginBody) {
-      const user = await authRepository.findUserByEmail(email);
+      const user = await authRepository.findUserByEmail(normalizeEmail(email));
       if (!user || !user.isActive) {
         throw new UnauthorizedError('Invalid email or password');
       }
@@ -166,7 +168,7 @@ export function buildAuthService(
     },
 
     async forgotPassword(email: string) {
-      const user = await authRepository.findUserByEmail(email);
+      const user = await authRepository.findUserByEmail(normalizeEmail(email));
       // Always resolve the same way whether or not the account exists,
       // so this endpoint can't be used to enumerate registered emails.
       if (!user || !user.isActive) {
@@ -181,7 +183,7 @@ export function buildAuthService(
         expiresAt,
       });
 
-      await sendPasswordResetEmail(email, user.username, passwordResetUrl);
+      await sendPasswordResetEmail(user.email, user.username, passwordResetUrl);
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {

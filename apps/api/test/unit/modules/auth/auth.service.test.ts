@@ -82,6 +82,19 @@ describe('auth.service', () => {
       expect(emailProvider.sendEmail).not.toHaveBeenCalled();
     });
 
+    it('normalizes the email before looking it up and storing it', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(undefined);
+      authRepository.createUser.mockResolvedValue(buildUser());
+
+      await service.register({ ...input, email: '  Alice@Test.DEV ' });
+
+      expect(authRepository.findUserByEmail).toHaveBeenCalledWith('alice@test.dev');
+      expect(authRepository.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'alice@test.dev' }),
+        tx,
+      );
+    });
+
     it('creates the user and default account in one transaction, then sends a verification email', async () => {
       const user = buildUser();
       authRepository.findUserByEmail.mockResolvedValue(undefined);
@@ -127,6 +140,15 @@ describe('auth.service', () => {
 
       await expect(service.validateCredentials(credentials)).resolves.toBe(user);
       expect(verifyPassword).toHaveBeenCalledWith('password123', user.passwordHash);
+    });
+
+    it('normalizes the email before looking the user up', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(buildUser());
+      vi.mocked(verifyPassword).mockResolvedValue(true);
+
+      await service.validateCredentials({ ...credentials, email: 'ALICE@Test.dev ' });
+
+      expect(authRepository.findUserByEmail).toHaveBeenCalledWith('alice@test.dev');
     });
 
     it.each([

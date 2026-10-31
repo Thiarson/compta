@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { UnauthorizedError } from '../../utils/http-error.js';
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../../constants/token.js';
 
@@ -71,7 +72,9 @@ export interface LogoutRoute {
 
 async function signPairTokens(reply: FastifyReply, userId: string) {
   const accessToken = await reply.signAccessToken({ sub: userId });
-  const refreshToken = await reply.signRefreshToken({ sub: userId });
+  // `jti` makes every refresh token unique: without it, two tokens issued for one user in the
+  // same second are identical and collide on the unique `refresh_tokens.token_hash`.
+  const refreshToken = await reply.signRefreshToken({ sub: userId, jti: randomUUID() });
 
   return { accessToken, refreshToken };
 }

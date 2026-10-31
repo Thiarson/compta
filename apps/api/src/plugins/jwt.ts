@@ -7,7 +7,7 @@ import type { FastifyRequest } from 'fastify';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { sub: string };
+    payload: { sub: string; jti?: string };
   }
 }
 
@@ -24,7 +24,7 @@ declare module 'fastify' {
 
   interface FastifyReply {
     signAccessToken(payload: { sub: string }): Promise<string>;
-    signRefreshToken(payload: { sub: string }): Promise<string>;
+    signRefreshToken(payload: { sub: string; jti: string }): Promise<string>;
   }
 }
 
