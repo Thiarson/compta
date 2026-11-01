@@ -60,3 +60,13 @@ export function createGate() {
   const opened = new Promise<void>((resolve) => (open = resolve));
   return { opened, open };
 }
+
+// Everything an authenticated dashboard visit needs, in one call.
+export function mockDashboardApi({
+  accounts = [],
+  transactions = [],
+}: { accounts?: AllAccountsResponse; transactions?: AllTransactionResponse } = {}) {
+  mockSession(verifiedUser);
+  mockAccounts(accounts);
+  mockTransactions(transactions);
+}

@@ -12,7 +12,8 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
-    env: { VITE_API_URL: 'http://api.test' },
+    // A fixed zone ahead of UTC (Madagascar, UTC+3) makes local-vs-UTC date bugs reproducible anywhere.
+    env: { VITE_API_URL: 'http://api.test', TZ: 'Indian/Antananarivo' },
     // Workspace packages ship raw TS, so Vitest must transform them (same as apps/api).
     server: { deps: { inline: [/@compta\//] } },
   },

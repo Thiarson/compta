@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toIsoDate } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -22,10 +23,6 @@ import type { TransactionType } from '@/features/transaction/transaction.hooks';
 import type { AddTransactionBody } from '@compta/contracts';
 
 import type { SubmitEvent } from 'react';
-
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function AddTransactionDialog({
   open,
@@ -43,13 +40,20 @@ export function AddTransactionDialog({
   const [type, setType] = React.useState<TransactionType>('expense');
   const [amount, setAmount] = React.useState('');
   const [description, setDescription] = React.useState('');
-  const [date, setDate] = React.useState(defaultDate ?? todayIsoDate());
+  const [date, setDate] = React.useState(defaultDate ?? toIsoDate(new Date()));
   const [touched, setTouched] = React.useState(false);
   const [prevOpen, setPrevOpen] = React.useState(open);
 
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) setDate(defaultDate ?? todayIsoDate());
+    if (open) {
+      // each opening starts a fresh transaction
+      setType('expense');
+      setAmount('');
+      setDescription('');
+      setTouched(false);
+      setDate(defaultDate ?? toIsoDate(new Date()));
+    }
   }
 
   const parsedAmount = Number(amount);

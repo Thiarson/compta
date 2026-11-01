@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { toast } from 'sonner';
 
 import { AddTransactionDialog } from '@/components/add-transaction-dialog';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -29,6 +30,7 @@ import {
   useTransactions,
   type Transaction,
 } from '@/features/transaction/transaction.hooks';
+import { ApiError } from '@/lib/api-error';
 import { cn, formatCurrency, isSameDay, toIsoDate } from '@/lib/utils';
 import { useParams } from '@tanstack/react-router';
 import {
@@ -41,6 +43,8 @@ import {
   WalletIcon,
 } from 'lucide-react';
 
+import type { AddTransactionBody } from '@compta/contracts';
+
 const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
   month: 'long',
@@ -50,7 +54,7 @@ const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
 export default function DashboardPage() {
   const { data: accounts, isPending } = useAccount();
   const { data: allTransactions = [] } = useTransactions();
-  const { mutate: addTransaction } = useCreateTransaction();
+  const { mutate: createTransaction } = useCreateTransaction();
   const [addTransactionOpen, setAddTransactionOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(() => new Date());
   const [deleteTransactionTarget, setDeleteTransactionTarget] = React.useState<Transaction | null>(
@@ -58,6 +62,14 @@ export default function DashboardPage() {
   );
 
   const { accountId } = useParams({ strict: false });
+
+  // The dialog closes on submit, so a failure can only be reported as a toast.
+  function addTransaction(body: AddTransactionBody) {
+    createTransaction(body, {
+      onError: (error) =>
+        toast.error(error instanceof ApiError ? error.message : 'Something went wrong'),
+    });
+  }
 
   const hasAccounts = !isPending && accounts && accounts.length > 0;
   const activeAccount = hasAccounts
