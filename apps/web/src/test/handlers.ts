@@ -37,3 +37,26 @@ export function mockAccounts(accounts: AllAccountsResponse) {
 export function mockTransactions(transactions: AllTransactionResponse = []) {
   server.use(http.get(apiUrl('/transactions'), () => HttpResponse.json(transactions)));
 }
+
+// 400 VALIDATION_ERROR in the shape apps/api sends, from a { field: message } map.
+export function validationError(fields: Record<string, string>) {
+  const details = Object.entries(fields).map(([field, message]) => ({
+    instancePath: `/${field}`,
+    params: {},
+    message,
+  }));
+
+  return HttpResponse.json(
+    { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Validation failed', details },
+    { status: 400 },
+  );
+}
+
+export const authPayload = (user: MeResponse) => ({ accessToken: 'access-1', user });
+
+// Lets a handler hold its response until the test calls `open()`, to observe "request in flight" UI.
+export function createGate() {
+  let open!: () => void;
+  const opened = new Promise<void>((resolve) => (open = resolve));
+  return { opened, open };
+}
