@@ -22,9 +22,14 @@ export const addTransactionBodySchema = Type.Object(
       transactionTypes.map((type) => Type.Literal(type)),
       { errorMessage: 'Type must be either income or expense' },
     ),
-    amount: Type.Number({
+    amount: Type.Integer({
       exclusiveMinimum: 0,
-      errorMessage: { exclusiveMinimum: 'Amount must be positive' },
+      maximum: 2_147_483_647, // largest value of the Postgres `integer` column
+      errorMessage: {
+        type: 'Amount must be a whole number',
+        exclusiveMinimum: 'Amount must be positive',
+        maximum: 'Amount is too large',
+      },
     }),
     description: Type.String({
       minLength: 2,

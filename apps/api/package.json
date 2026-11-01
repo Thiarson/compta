@@ -7,6 +7,9 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json --noEmit && node build.js",
     "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:watch": "vitest",
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -28,6 +31,7 @@
     "argon2": "^0.44.0",
     "close-with-grace": "^2.5.0",
     "drizzle-orm": "^0.45.2",
+    "escape-html": "^1.0.3",
     "fastify": "^5.9.0",
     "fastify-plugin": "^6.0.0",
     "ioredis": "^5.11.1",
@@ -35,11 +39,14 @@
   },
   "devDependencies": {
     "@compta/eslint-config": "workspace:*",
+    "@testcontainers/postgresql": "^12.1.0",
+    "@types/escape-html": "^1.0.4",
     "@types/node": "^24.13.2",
     "esbuild": "^0.28.1",
     "eslint": "^10.6.0",
     "glob": "^13.0.6",
     "tsx": "^4.22.4",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
   }
 }

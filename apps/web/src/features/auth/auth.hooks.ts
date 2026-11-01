@@ -53,8 +53,8 @@ export function useLogout() {
     mutationFn: authApi.logout,
     onSuccess: () => {
       setAccessToken(null);
-      // drop, don't invalidate: there's no session to refetch after logout
-      queryClient.removeQueries({ queryKey: authKeys.all });
+      // Clear (not invalidate) the cache so the next user never sees this user's data.
+      queryClient.clear();
       router.navigate({ to: '/login' });
       toast.success('Signed out');
     },

@@ -1,6 +1,5 @@
-import { queryOptions, useMutation, useQuery } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { transactionApi } from './transaction.api';
-import { queryClient } from '@/lib/query-client';
 
 import type { AddTransactionBody, AllTransactionResponse } from '@compta/contracts';
 
@@ -22,19 +21,20 @@ export function useTransactions() {
 }
 
 export function useCreateTransaction() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (body: AddTransactionBody) => transactionApi.createNewTransaction(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() });
-    },
+    // returned so the mutation stays pending until the list is refetched
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() }),
   });
 }
 
 export function useDeleteTransaction() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (id: string) => transactionApi.deleteTransaction(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: transactionKeys.transactions() }),
   });
 }

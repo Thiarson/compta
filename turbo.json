@@ -12,6 +12,8 @@
       "cache": false
     },
     "start": {},
+    "test": { "dependsOn": ["^test"], "outputs": ["coverage/**"] },
+    "test:watch": { "cache": false, "persistent": true },
     "lint": {},
     "format": {},
     "format:check": {}

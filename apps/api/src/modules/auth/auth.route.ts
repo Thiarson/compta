@@ -34,6 +34,8 @@ import type {
 } from './auth.controller.js';
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
+// `skipOnError: false` blocks the request if the rate-limit store is down,
+// so brute-force protection is never silently skipped.
 const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   const authRepository = buildAuthRepository(app.db);
   const accountsRepository = buildAccountsRepository(app.db);
@@ -46,7 +48,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     '/register',
     {
       schema: { body: registerBodySchema, response: authCreatedResponseSchema },
-      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes', skipOnError: false } },
     },
     authController.register,
   );
@@ -55,7 +57,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     '/login',
     {
       schema: { body: loginBodySchema, response: authResponseSchema },
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute', skipOnError: false } },
     },
     authController.login,
   );
@@ -65,7 +67,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     {
       schema: { response: resendVerificationResponseSchema },
       preHandler: [app.authenticate],
-      config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
+      config: { rateLimit: { max: 3, timeWindow: '10 minutes', skipOnError: false } },
     },
     authController.resendVerification,
   );
@@ -80,7 +82,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     '/forgot-password',
     {
       schema: { body: forgotPasswordBodySchema, response: forgotPasswordResponseSchema },
-      config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
+      config: { rateLimit: { max: 3, timeWindow: '10 minutes', skipOnError: false } },
     },
     authController.forgotPassword,
   );
@@ -100,7 +102,7 @@ const authRoute: FastifyPluginAsyncTypebox = async (app) => {
     '/reset-password',
     {
       schema: { body: resetPasswordBodySchema, response: resetPasswordResponseSchema },
-      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes', skipOnError: false } },
     },
     authController.resetPassword,
   );

@@ -13,7 +13,7 @@ export function NotFound() {
       <Card>
         <CardHeader>
           <FileQuestion className="size-8 text-muted-foreground" aria-hidden="true" />
-          <CardTitle>Page not found</CardTitle>
+          <CardTitle level={1}>Page not found</CardTitle>
           <CardDescription>
             The page you&apos;re looking for doesn&apos;t exist or may have moved.
           </CardDescription>

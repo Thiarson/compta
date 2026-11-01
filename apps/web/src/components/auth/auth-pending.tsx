@@ -10,7 +10,7 @@ export function AuthPending({ title, ...props }: React.ComponentProps<'div'> & {
     <CenteredPage role="status" aria-live="polite" {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle level={1} className="flex items-center gap-2">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             {title}
           </CardTitle>

@@ -34,11 +34,15 @@ export function buildAuthRepository(db: Database['db']) {
       return db.query.refreshTokens.findFirst({ where: eq(refreshTokens.tokenHash, tokenHash) });
     },
 
+    /** Revokes the token if it is still active; returns whether this call revoked it. */
     async revokeRefreshToken(tokenHash: string) {
-      await db
+      const revoked = await db
         .update(refreshTokens)
         .set({ revokedAt: new Date() })
-        .where(eq(refreshTokens.tokenHash, tokenHash));
+        .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)))
+        .returning({ id: refreshTokens.id });
+
+      return revoked.length > 0;
     },
 
     async createEmailVerificationToken(data: NewEmailVerificationToken) {

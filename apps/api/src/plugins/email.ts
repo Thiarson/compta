@@ -1,15 +1,24 @@
 import fp from 'fastify-plugin';
 import { Resend } from 'resend';
 
-function buildEmailProvider(resend: Resend, from: string) {
+import type { FastifyBaseLogger } from 'fastify';
+
+/**
+ * Delivery is best-effort: failures are logged and never thrown,
+ * so a provider outage can't fail a request (or reveal through a 500 that an email address is registered).
+ */
+function buildEmailProvider(resend: Resend, from: string, log: FastifyBaseLogger) {
   return {
     async sendEmail(to: string, subject: string, body: string) {
-      await resend.emails.send({
-        from,
-        to,
-        subject: subject,
-        html: body,
-      });
+      try {
+        // Resend reports API errors in `error` instead of throwing
+        const { error } = await resend.emails.send({ from, to, subject, html: body });
+        if (error) {
+          log.error({ err: error, subject }, 'email: delivery failed');
+        }
+      } catch (err) {
+        log.error({ err, subject }, 'email: delivery failed');
+      }
     },
   };
 }
@@ -24,5 +33,5 @@ declare module 'fastify' {
 
 export default fp(async function emailPlugin(app) {
   const resend = new Resend(app.config.EMAIL_API_KEY);
-  app.decorate('email', buildEmailProvider(resend, app.config.EMAIL_FROM));
+  app.decorate('email', buildEmailProvider(resend, app.config.EMAIL_FROM, app.log));
 });

@@ -1,6 +1,5 @@
-import { queryOptions, useMutation, useQuery } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountApi } from './account.api';
-import { queryClient } from '@/lib/query-client';
 
 import type { AllAccountsResponse } from '@compta/contracts';
 
@@ -18,20 +17,21 @@ export function useAccount() {
 }
 
 export function useCreateAccount() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: accountApi.createNewAccount,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: accountKeys.accounts() });
-    },
+    // returned so the mutation stays pending until the list is refetched
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: accountKeys.accounts() }),
   });
 }
 
 export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: accountApi.deleteAccount,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: accountKeys.accounts() });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: accountKeys.accounts() }),
   });
 }
 

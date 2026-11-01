@@ -30,35 +30,35 @@ export function buildAccountsRepository(db: Database['db']) {
       return account;
     },
 
-    async findActiveByIdAndUserId(id: string, userId: string) {
-      return db.query.accounts.findFirst({
-        where: and(eq(accounts.id, id), eq(accounts.userId, userId), eq(accounts.isActive, true)),
-        columns: { id: true },
-      });
-    },
+    /**
+     * Soft-deletes an account and its transactions, unless it is the user's last active one.
+     * Locks the user's active accounts (in id order) so concurrent deletes can't remove them all.
+     */
+    async softDeleteUnlessLast(id: string, userId: string) {
+      return db.transaction(async (tx) => {
+        // Lock all active accounts of the user, ordered by id to avoid deadlocks
+        const activeAccounts = await tx
+          .select({ id: accounts.id })
+          .from(accounts)
+          .where(and(eq(accounts.userId, userId), eq(accounts.isActive, true)))
+          .orderBy(accounts.id)
+          .for('update');
 
-    async countActiveByUserId(userId: string) {
-      const activeAccounts = await db.query.accounts.findMany({
-        where: and(eq(accounts.userId, userId), eq(accounts.isActive, true)),
-        columns: { id: true },
-      });
+        if (!activeAccounts.some((account) => account.id === id)) return 'not_found';
+        if (activeAccounts.length === 1) return 'last_account';
 
-      return activeAccounts.length;
-    },
-
-    async softDeleteById(id: string) {
-      const now = new Date();
-
-      await db.transaction(async (tx) => {
+        // Soft-delete the transactions first, then the account
+        const now = new Date();
         await tx
           .update(transactions)
           .set({ deletedAt: now })
           .where(and(eq(transactions.accountId, id), isNull(transactions.deletedAt)));
-
         await tx
           .update(accounts)
           .set({ isActive: false, deletedAt: now })
           .where(eq(accounts.id, id));
+
+        return 'deleted';
       });
     },
   };

@@ -10,6 +10,8 @@ export default defineConfig({
     tanstackRouter({
       target: 'react',
       autoCodeSplitting: true,
+      // tests live next to the routes they cover and must not be read as routes
+      routeFileIgnorePattern: '\\.test\\.',
     }),
     react(),
     tailwindcss(),

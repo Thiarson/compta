@@ -11,7 +11,7 @@ export default fp(async function rateLimitPlugin(app) {
       redis.on('error', (err) => {
         app.log.error(
           { err },
-          'rate-limit: Redis connection error, requests fall back to in-memory limiting',
+          'rate-limit: Redis connection error, only auth routes are refused until it recovers',
         );
       });
     } catch (err) {
@@ -26,9 +26,16 @@ export default fp(async function rateLimitPlugin(app) {
       : 'rate-limit: using in-memory store (REDIS_URL not set)',
   );
 
+  app.addHook('onClose', async () => {
+    redis?.disconnect();
+  });
+
   await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
     redis,
+    // If the store is down, skip limiting and keep serving requests.
+    // Auth routes override this and block instead.
+    skipOnError: true,
   });
 });

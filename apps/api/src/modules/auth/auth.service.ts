@@ -1,4 +1,7 @@
+import escapeHtml from 'escape-html';
 import { daysToMs } from '../../utils/time.js';
+import { normalizeEmail } from '../../utils/email.js';
+import { isUniqueViolation } from '../../utils/db-error.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import {
@@ -50,7 +53,7 @@ export function buildAuthService(
       email,
       'Verify your Compta email',
       `
-        <p>Hi ${username},</p>
+        <p>Hi ${escapeHtml(username)},</p>
         <p>Click the link below to verify your email address. This link expires in 8 hours.</p>
         <p><a href="${verificationUrl}">Verify my email</a></p>
         <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
@@ -64,7 +67,7 @@ export function buildAuthService(
       email,
       'Reset your Compta password',
       `
-        <p>Hi ${username},</p>
+        <p>Hi ${escapeHtml(username)},</p>
         <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
         <p><a href="${passwordResetUrl}">Reset my password</a></p>
         <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
@@ -74,18 +77,26 @@ export function buildAuthService(
   }
 
   return {
-    async register({ username, email, password }: RegisterBody) {
+    async register({ username, email: rawEmail, password }: RegisterBody) {
+      const email = normalizeEmail(rawEmail);
       const existing = await authRepository.findUserByEmail(email);
       if (existing) {
         throw new ConflictError('Email already in use');
       }
 
       const passwordHash = await hashPassword(password);
-      const newUser = await db.transaction(async (tx) => {
-        const user = await authRepository.createUser({ username, email, passwordHash }, tx);
-        await accountsRepository.createDefault(user.id, tx);
-        return user;
-      });
+      let newUser;
+      try {
+        newUser = await db.transaction(async (tx) => {
+          const user = await authRepository.createUser({ username, email, passwordHash }, tx);
+          await accountsRepository.createDefault(user.id, tx);
+          return user;
+        });
+      } catch (err) {
+        // Another request registered the same email between the check above and the insert
+        if (isUniqueViolation(err)) throw new ConflictError('Email already in use');
+        throw err;
+      }
 
       const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
@@ -101,7 +112,7 @@ export function buildAuthService(
     },
 
     async validateCredentials({ email, password }: LoginBody) {
-      const user = await authRepository.findUserByEmail(email);
+      const user = await authRepository.findUserByEmail(normalizeEmail(email));
       if (!user || !user.isActive) {
         throw new UnauthorizedError('Invalid email or password');
       }
@@ -166,7 +177,7 @@ export function buildAuthService(
     },
 
     async forgotPassword(email: string) {
-      const user = await authRepository.findUserByEmail(email);
+      const user = await authRepository.findUserByEmail(normalizeEmail(email));
       // Always resolve the same way whether or not the account exists,
       // so this endpoint can't be used to enumerate registered emails.
       if (!user || !user.isActive) {
@@ -181,7 +192,7 @@ export function buildAuthService(
         expiresAt,
       });
 
-      await sendPasswordResetEmail(email, user.username, passwordResetUrl);
+      await sendPasswordResetEmail(user.email, user.username, passwordResetUrl);
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {
@@ -237,7 +248,11 @@ export function buildAuthService(
         throw new UnauthorizedError('Invalid refresh token');
       }
 
-      await authRepository.revokeRefreshToken(tokenHash);
+      // Only one of several concurrent requests can revoke the token; the others are rejected
+      const revoked = await authRepository.revokeRefreshToken(tokenHash);
+      if (!revoked) {
+        throw new UnauthorizedError('Invalid refresh token');
+      }
 
       const user = await authRepository.findUserById(record.userId);
       if (!user || !user.isActive) {

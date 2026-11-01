@@ -7,6 +7,16 @@ const API_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
 // "bad credentials", not "token expired" — retrying would just loop.
 const AUTH_RETRY_EXCLUDED = ['/auth/login', '/auth/refresh'];
 
+type ApiErrorBody = { statusCode: number; code: string; message: string; details?: unknown };
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
 async function request<T>(path: string, options: RequestOptions): Promise<T> {
@@ -27,11 +37,19 @@ async function request<T>(path: string, options: RequestOptions): Promise<T> {
 
   // No body to parse for empty responses (e.g. 202 Accepted, 204 No Content)
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
-    throw new ApiError(data.statusCode, data.code, data.message, data.details);
+    // Gateways and proxies can answer with HTML or nothing; still surface a proper ApiError.
+    const error = parseJson(text) as Partial<ApiErrorBody> | null;
+    throw new ApiError(
+      error?.statusCode ?? res.status,
+      error?.code ?? 'UNKNOWN_ERROR',
+      error?.message ?? (res.statusText || 'Request failed'),
+      error?.details,
+    );
   }
+
+  const data = text ? JSON.parse(text) : null;
 
   return data as T;
 }

@@ -48,7 +48,7 @@ function VerifyEmailOutcome({
       <div className={cn('flex flex-col gap-6', className)} {...props}>
         <Card>
           <CardHeader>
-            <CardTitle>Email verified</CardTitle>
+            <CardTitle level={1}>Email verified</CardTitle>
             <CardDescription>Your account is now active.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -75,7 +75,7 @@ function VerifyEmailOutcome({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Verification failed</CardTitle>
+          <CardTitle level={1}>Verification failed</CardTitle>
           <CardDescription>{result.message}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -120,7 +120,7 @@ function ResendVerification({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Verify your email</CardTitle>
+          <CardTitle level={1}>Verify your email</CardTitle>
           <CardDescription>
             We sent a verification link to{' '}
             <span className="font-medium text-foreground">{user?.email}</span>. Click the link to
