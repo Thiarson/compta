@@ -1,3 +1,23 @@
 node_modules
-
 .turbo
+dist
+dist-ssr
+coverage
+
+# Env files (keep the templates)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Test output
+test-results
+playwright-report
+
+# OS / editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
