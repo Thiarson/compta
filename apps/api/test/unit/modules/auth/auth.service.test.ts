@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAuthService } from '../../../../src/modules/auth/auth.service.js';
 import { hashToken } from '../../../../src/utils/token.js';
@@ -80,6 +81,27 @@ describe('auth.service', () => {
       expect(hashPassword).not.toHaveBeenCalled();
       expect(authRepository.createUser).not.toHaveBeenCalled();
       expect(emailProvider.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictError when a concurrent request registers the same email first', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(undefined);
+      const duplicateKey = Object.assign(new Error('duplicate key'), { code: '23505' });
+      authRepository.createUser.mockRejectedValue(
+        new DrizzleQueryError('insert into "users" ...', [], duplicateKey),
+      );
+
+      await expect(service.register(input)).rejects.toThrow(
+        new ConflictError('Email already in use'),
+      );
+      expect(emailProvider.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('rethrows other database errors unchanged', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(undefined);
+      const failure = new Error('connection lost');
+      authRepository.createUser.mockRejectedValue(failure);
+
+      await expect(service.register(input)).rejects.toBe(failure);
     });
 
     it('normalizes the email before looking it up and storing it', async () => {
@@ -288,6 +310,7 @@ describe('auth.service', () => {
       authRepository.findRefreshTokenByHash.mockResolvedValue(
         buildRefreshToken({ userId: user.id }),
       );
+      authRepository.revokeRefreshToken.mockResolvedValue(true);
       authRepository.findUserById.mockResolvedValue(user);
 
       await expect(service.rotateRefreshToken(TOKEN)).resolves.toBe(user);
@@ -309,11 +332,20 @@ describe('auth.service', () => {
       },
     );
 
+    it('throws UnauthorizedError when a concurrent request revoked the token first', async () => {
+      authRepository.findRefreshTokenByHash.mockResolvedValue(buildRefreshToken());
+      authRepository.revokeRefreshToken.mockResolvedValue(false);
+
+      await expect(service.rotateRefreshToken(TOKEN)).rejects.toThrow(invalidRefreshToken);
+      expect(authRepository.findUserById).not.toHaveBeenCalled();
+    });
+
     it.each([
       { name: 'no longer exists', user: undefined },
       { name: 'is inactive', user: buildUser({ isActive: false }) },
     ])('throws UnauthorizedError when the token owner $name', async ({ user }) => {
       authRepository.findRefreshTokenByHash.mockResolvedValue(buildRefreshToken());
+      authRepository.revokeRefreshToken.mockResolvedValue(true);
       authRepository.findUserById.mockResolvedValue(user);
 
       await expect(service.rotateRefreshToken(TOKEN)).rejects.toThrow(invalidRefreshToken);

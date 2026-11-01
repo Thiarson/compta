@@ -13,9 +13,7 @@ describe('accounts.service', () => {
   const repository = {
     getAllAccountByUserId: vi.fn(),
     createNewAccountByUserId: vi.fn(),
-    findActiveByIdAndUserId: vi.fn(),
-    countActiveByUserId: vi.fn(),
-    softDeleteById: vi.fn(),
+    softDeleteUnlessLast: vi.fn(),
   };
   const service = buildAccountsService(repository as unknown as AccountsRepository);
 
@@ -24,32 +22,27 @@ describe('accounts.service', () => {
   });
 
   describe('deleteAccount', () => {
+    it('deletes the account of this user', async () => {
+      repository.softDeleteUnlessLast.mockResolvedValue('deleted');
+
+      await expect(service.deleteAccount(USER_ID, ACCOUNT_ID)).resolves.toBeUndefined();
+      expect(repository.softDeleteUnlessLast).toHaveBeenCalledWith(ACCOUNT_ID, USER_ID);
+    });
+
     it('throws NotFoundError when the account is not found for this user', async () => {
-      repository.findActiveByIdAndUserId.mockResolvedValue(undefined);
+      repository.softDeleteUnlessLast.mockResolvedValue('not_found');
 
       await expect(service.deleteAccount(USER_ID, ACCOUNT_ID)).rejects.toThrow(
         new NotFoundError('Account not found'),
       );
-      expect(repository.findActiveByIdAndUserId).toHaveBeenCalledWith(ACCOUNT_ID, USER_ID);
-      expect(repository.softDeleteById).not.toHaveBeenCalled();
     });
 
     it('throws ConflictError when it is the only active account', async () => {
-      repository.findActiveByIdAndUserId.mockResolvedValue({ id: ACCOUNT_ID });
-      repository.countActiveByUserId.mockResolvedValue(1);
+      repository.softDeleteUnlessLast.mockResolvedValue('last_account');
 
       await expect(service.deleteAccount(USER_ID, ACCOUNT_ID)).rejects.toThrow(
         new ConflictError('Cannot delete your only account'),
       );
-      expect(repository.softDeleteById).not.toHaveBeenCalled();
-    });
-
-    it.each([2, 5])('soft-deletes the account when the user has %i active accounts', async (n) => {
-      repository.findActiveByIdAndUserId.mockResolvedValue({ id: ACCOUNT_ID });
-      repository.countActiveByUserId.mockResolvedValue(n);
-
-      await expect(service.deleteAccount(USER_ID, ACCOUNT_ID)).resolves.toBeUndefined();
-      expect(repository.softDeleteById).toHaveBeenCalledExactlyOnceWith(ACCOUNT_ID);
     });
   });
 

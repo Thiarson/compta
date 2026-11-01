@@ -24,9 +24,11 @@ export const addTransactionBodySchema = Type.Object(
     ),
     amount: Type.Integer({
       exclusiveMinimum: 0,
+      maximum: 2_147_483_647, // largest value of the Postgres `integer` column
       errorMessage: {
         type: 'Amount must be a whole number',
         exclusiveMinimum: 'Amount must be positive',
+        maximum: 'Amount is too large',
       },
     }),
     description: Type.String({

@@ -17,7 +17,11 @@ export const createAccountBodySchema = Type.Object(
     category: Type.String({
       minLength: 2,
       maxLength: 50,
-      errorMessage: { minLength: 'Account name must be at least 2 characters' },
+      pattern: '\\S', // at least one non-whitespace character
+      errorMessage: {
+        minLength: 'Account name must be at least 2 characters',
+        pattern: 'Account name cannot be blank',
+      },
     }),
   },
   {

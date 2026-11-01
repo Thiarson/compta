@@ -1,5 +1,6 @@
 import { daysToMs } from '../../utils/time.js';
 import { normalizeEmail } from '../../utils/email.js';
+import { isUniqueViolation } from '../../utils/db-error.js';
 import { generateToken, hashToken } from '../../utils/token.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import {
@@ -83,11 +84,18 @@ export function buildAuthService(
       }
 
       const passwordHash = await hashPassword(password);
-      const newUser = await db.transaction(async (tx) => {
-        const user = await authRepository.createUser({ username, email, passwordHash }, tx);
-        await accountsRepository.createDefault(user.id, tx);
-        return user;
-      });
+      let newUser;
+      try {
+        newUser = await db.transaction(async (tx) => {
+          const user = await authRepository.createUser({ username, email, passwordHash }, tx);
+          await accountsRepository.createDefault(user.id, tx);
+          return user;
+        });
+      } catch (err) {
+        // Another request registered the same email between the check above and the insert
+        if (isUniqueViolation(err)) throw new ConflictError('Email already in use');
+        throw err;
+      }
 
       const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
@@ -239,7 +247,11 @@ export function buildAuthService(
         throw new UnauthorizedError('Invalid refresh token');
       }
 
-      await authRepository.revokeRefreshToken(tokenHash);
+      // Only one of several concurrent requests can revoke the token; the others are rejected
+      const revoked = await authRepository.revokeRefreshToken(tokenHash);
+      if (!revoked) {
+        throw new UnauthorizedError('Invalid refresh token');
+      }
 
       const user = await authRepository.findUserById(record.userId);
       if (!user || !user.isActive) {

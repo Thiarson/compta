@@ -15,19 +15,15 @@ export function buildAccountsService(accountsRepository: AccountsRepository) {
     },
 
     async deleteAccount(userId: string, accountId: string) {
-      const account = await accountsRepository.findActiveByIdAndUserId(accountId, userId);
+      const result = await accountsRepository.softDeleteUnlessLast(accountId, userId);
 
-      if (!account) {
+      if (result === 'not_found') {
         throw new NotFoundError('Account not found');
       }
 
-      const activeCount = await accountsRepository.countActiveByUserId(userId);
-
-      if (activeCount <= 1) {
+      if (result === 'last_account') {
         throw new ConflictError('Cannot delete your only account');
       }
-
-      await accountsRepository.softDeleteById(accountId);
     },
   };
 }

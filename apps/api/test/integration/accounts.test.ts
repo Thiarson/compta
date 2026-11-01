@@ -87,6 +87,26 @@ describe('accounts', () => {
     });
   });
 
+  describe('POST /accounts naming rules', () => {
+    it('allows two accounts with the same name', async () => {
+      const alice = await registerUser(ctx.app);
+      await createAccount(ctx.app, alice.headers, 'Savings');
+
+      const res = await create(alice.headers, { category: 'Savings' });
+
+      expect(res.statusCode).toBe(201);
+    });
+
+    it('rejects a name made only of spaces', async () => {
+      const alice = await registerUser(ctx.app);
+
+      const res = await create(alice.headers, { category: '   ' });
+
+      expect(res.statusCode).toBe(400);
+      expect(JSON.stringify(res.json().details)).toContain('Account name cannot be blank');
+    });
+  });
+
   describe('DELETE /accounts/:id', () => {
     it('soft-deletes the account and all its transactions', async () => {
       const alice = await registerUser(ctx.app);

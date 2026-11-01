@@ -132,6 +132,34 @@ describe('transactions', () => {
       });
     });
 
+    describe('amount range', () => {
+      const INT_MAX = 2_147_483_647; // `transactions.amount` is a Postgres `integer`
+
+      it('stores and returns the largest supported amount unchanged', async () => {
+        const alice = await aUser();
+
+        const res = await create(
+          alice.headers,
+          buildTransactionPayload(alice.account.id, { amount: INT_MAX }),
+        );
+
+        expect(res.statusCode).toBe(201);
+        expect(res.json().amount).toBe(INT_MAX);
+      });
+
+      it('rejects an amount too large for the database with 400 instead of crashing', async () => {
+        const alice = await aUser();
+
+        const res = await create(
+          alice.headers,
+          buildTransactionPayload(alice.account.id, { amount: INT_MAX + 1 }),
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.stringify(res.json().details)).toContain('Amount is too large');
+      });
+    });
+
     describe('ownership', () => {
       it("answers 404 for another user's account and creates nothing", async () => {
         const alice = await aUser();
@@ -168,6 +196,17 @@ describe('transactions', () => {
   });
 
   describe('GET /transactions', () => {
+    it('exposes only the contract fields, never internal columns', async () => {
+      const alice = await aUser();
+      await createTransaction(ctx.app, alice.headers, alice.account.id);
+
+      const [transaction] = await list(alice.headers);
+
+      expect(Object.keys(transaction).sort()).toEqual(
+        ['accountId', 'amount', 'createdAt', 'date', 'description', 'id', 'type'].sort(),
+      );
+    });
+
     it('returns an empty list for a new user', async () => {
       const alice = await aUser();
 

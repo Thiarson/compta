@@ -192,5 +192,24 @@ describe('session', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual(alice.user);
     });
+
+    it.each([
+      { name: 'deactivated', change: { isActive: false } },
+      { name: 'deleted', change: null },
+    ])('rejects a valid token whose user was $name', async ({ change }) => {
+      const alice = await registerUser(ctx.app);
+      const byId = eq(users.id, alice.user.id);
+      await (change
+        ? ctx.app.db.update(users).set(change).where(byId)
+        : ctx.app.db.delete(users).where(byId));
+
+      const res = await call(ctx.app, {
+        method: 'GET',
+        url: `${API}/auth/me`,
+        headers: alice.headers,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
   });
 });
