@@ -85,9 +85,9 @@ export function AddTransactionDialog({
           </DialogHeader>
 
           <Field>
-            <FieldLabel>Type</FieldLabel>
+            <FieldLabel htmlFor="transaction-type">Type</FieldLabel>
             <Select value={type} onValueChange={(value) => setType(value as TransactionType)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="transaction-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

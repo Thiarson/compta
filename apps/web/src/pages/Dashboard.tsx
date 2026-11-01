@@ -184,7 +184,9 @@ export default function DashboardPage() {
                           <TableHead>Type</TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="w-10" />
+                          <TableHead className="w-10">
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
