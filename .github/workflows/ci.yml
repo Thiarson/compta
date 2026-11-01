@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  # Manual only for now: run it from the Actions tab ("Run workflow").
+  workflow_dispatch:
+  # To run automatically, uncomment these and remove workflow_dispatch above if not wanted:
+  # pull_request:
+  # push:
+  #   branches: [main]
+
+# Least privilege: CI only needs to read the code.
+permissions:
+  contents: read
+
+# A new push to the same branch/PR cancels the run still in progress.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, unit and integration tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the pnpm version from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Turbo skips tasks whose inputs did not change.
+      # The API integration tests start Postgres with Testcontainers (Docker is on the runner).
+      - run: pnpm turbo run format:check lint check-types test build
+
+  e2e:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      # global-setup starts Postgres (Testcontainers), the API and a fake mail server.
+      - name: Run e2e tests
+        working-directory: apps/web
+        run: pnpm test:e2e
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7
+
+  # Checks that both images still build (no push: there is nowhere to deploy yet).
+  docker:
+    name: Docker build (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/${{ matrix.app }}/Dockerfile .

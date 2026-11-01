@@ -1,0 +1,36 @@
+# Dependencies & build output
+**/node_modules
+**/dist
+**/dist-ssr
+**/.turbo
+**/coverage
+
+# VCS & editor
+.git
+.gitignore
+.zed
+.vscode
+.idea
+.DS_Store
+
+# Secrets (keep the templates)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Tests & reports
+**/test-results
+**/playwright-report
+
+# Generated / local
+**/.tanstack
+**/*.log
+**/*.local
+
+# Docker files themselves
+**/Dockerfile*
+compose*.y*ml
+.dockerignore
+
+# Docs
+README.md
