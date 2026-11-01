@@ -33,10 +33,16 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+// `level` exposes the title as a heading, for cards that are the whole page (auth, errors).
+function CardTitle({
+  className,
+  level,
+  ...props
+}: React.ComponentProps<'div'> & { level?: 1 | 2 | 3 }) {
   return (
     <div
       data-slot="card-title"
+      {...(level ? { role: 'heading', 'aria-level': level } : {})}
       className={cn(
         'font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm',
         className,

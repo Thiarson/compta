@@ -23,7 +23,7 @@ export function ResetPassword({ className, ...props }: React.ComponentProps<'div
       <div className={cn('flex flex-col gap-6', className)} {...props}>
         <Card>
           <CardHeader>
-            <CardTitle>Link expired</CardTitle>
+            <CardTitle level={1}>Link expired</CardTitle>
             <CardDescription>{result.message}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -79,7 +79,7 @@ function ResetPasswordForm({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Set a new password</CardTitle>
+          <CardTitle level={1}>Set a new password</CardTitle>
           <CardDescription>Enter a new password for your account</CardDescription>
         </CardHeader>
         <CardContent>

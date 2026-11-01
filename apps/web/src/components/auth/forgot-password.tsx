@@ -35,7 +35,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
       <div className={cn('flex flex-col gap-6', className)} {...props}>
         <Card>
           <CardHeader>
-            <CardTitle>Check your email</CardTitle>
+            <CardTitle level={1}>Check your email</CardTitle>
             <CardDescription>
               If an account exists for <span className="font-medium text-foreground">{email}</span>,
               we&apos;ve sent a link to reset your password. It expires in 30 minutes.
@@ -63,7 +63,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Reset your password</CardTitle>
+          <CardTitle level={1}>Reset your password</CardTitle>
           <CardDescription>
             Enter your email below and we&apos;ll send you a link to reset your password
           </CardDescription>

@@ -15,7 +15,7 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
       <Card>
         <CardHeader>
           <AlertTriangle className="size-8 text-destructive" aria-hidden="true" />
-          <CardTitle>Something went wrong</CardTitle>
+          <CardTitle level={1}>Something went wrong</CardTitle>
           <CardDescription>
             {import.meta.env.DEV ? error.message : 'Please try again, or come back later.'}
           </CardDescription>
