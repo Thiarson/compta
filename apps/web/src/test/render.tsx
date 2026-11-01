@@ -1,4 +1,5 @@
-import { render, renderHook } from '@testing-library/react';
+import { render, renderHook, waitFor } from '@testing-library/react';
+import { expect } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   RouterContextProvider,
@@ -28,13 +29,15 @@ function createTestContext(path: string) {
 // Renders the real route tree at `path`, so guards, loaders and pages run as in the app.
 export async function renderApp(path = '/') {
   const { queryClient, router } = createTestContext(path);
-  await router.load();
 
+  // RouterProvider runs the initial load itself; loading here too would run every loader twice.
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  await waitFor(() => expect(router.state.status).toBe('idle'));
+  await waitFor(() => expect(router.state.resolvedLocation).toBeDefined());
 
   return { router, queryClient };
 }
