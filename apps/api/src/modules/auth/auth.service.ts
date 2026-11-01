@@ -1,3 +1,4 @@
+import escapeHtml from 'escape-html';
 import { daysToMs } from '../../utils/time.js';
 import { normalizeEmail } from '../../utils/email.js';
 import { isUniqueViolation } from '../../utils/db-error.js';
@@ -52,7 +53,7 @@ export function buildAuthService(
       email,
       'Verify your Compta email',
       `
-        <p>Hi ${username},</p>
+        <p>Hi ${escapeHtml(username)},</p>
         <p>Click the link below to verify your email address. This link expires in 8 hours.</p>
         <p><a href="${verificationUrl}">Verify my email</a></p>
         <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
@@ -66,7 +67,7 @@ export function buildAuthService(
       email,
       'Reset your Compta password',
       `
-        <p>Hi ${username},</p>
+        <p>Hi ${escapeHtml(username)},</p>
         <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
         <p><a href="${passwordResetUrl}">Reset my password</a></p>
         <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>

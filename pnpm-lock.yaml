@@ -62,6 +62,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(postgres@3.4.9)
+      escape-html:
+        specifier: ^1.0.3
+        version: 1.0.3
       fastify:
         specifier: ^5.9.0
         version: 5.9.0
@@ -81,6 +84,9 @@ importers:
       '@testcontainers/postgresql':
         specifier: ^12.1.0
         version: 12.1.0
+      '@types/escape-html':
+        specifier: ^1.0.4
+        version: 1.0.4
       '@types/node':
         specifier: ^24.13.2
         version: 24.13.2
@@ -1505,6 +1511,9 @@ packages:
 
   '@types/dockerode@4.0.1':
     resolution: {integrity: sha512-cmUpB+dPN955PxBEuXE3f6lKO1hHiIGYJA46IVF3BJpNsZGvtBDcRnlrHYHtOH/B6vtDOyl2kZ2ShAu3mgc27Q==}
+
+  '@types/escape-html@1.0.4':
+    resolution: {integrity: sha512-qZ72SFTgUAZ5a7Tj6kf2SHLetiH5S6f8G5frB2SPQ3EyF02kxdyBFf4Tz4banE3xCgGnKgWLt//a6VuYHKYJTg==}
 
   '@types/esrecurse@4.3.1':
     resolution: {integrity: sha512-xJBAbDifo5hpffDBuHl0Y8ywswbiAp/Wi7Y/GtAgSlZyIABppyurxVueOPE8LUQOxdlgi6Zqce7uoEpqNTeiUw==}
@@ -5108,6 +5117,8 @@ snapshots:
       '@types/docker-modem': 3.0.6
       '@types/node': 24.13.2
       '@types/ssh2': 1.15.6
+
+  '@types/escape-html@1.0.4': {}
 
   '@types/esrecurse@4.3.1': {}
 

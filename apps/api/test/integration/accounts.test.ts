@@ -5,6 +5,7 @@ import { setupTestApp } from '../helpers/app.js';
 import { API, call } from '../helpers/api.js';
 import { registerUser } from '../helpers/auth.js';
 import { createAccount, createTransaction, listAccounts } from '../helpers/data.js';
+import { failWritesTo } from '../helpers/db.js';
 
 const NON_EXISTENT_ID = '00000000-0000-4000-8000-000000000000';
 
@@ -123,6 +124,25 @@ describe('accounts', () => {
         .from(transactions)
         .where(eq(transactions.id, transaction.id));
       expect(row.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('rolls back completely when the deletion fails halfway', async () => {
+      const alice = await registerUser(ctx.app);
+      const savings = await createAccount(ctx.app, alice.headers);
+      const transaction = await createTransaction(ctx.app, alice.headers, savings.id);
+      // transactions are soft-deleted first, then the account update fails
+      await failWritesTo(ctx.app, 'accounts', 'UPDATE');
+
+      const res = await remove(alice.headers, savings.id);
+
+      expect(res.statusCode).toBe(500);
+      const [account] = await ctx.app.db.select().from(accounts).where(eq(accounts.id, savings.id));
+      expect(account.isActive).toBe(true);
+      const [row] = await ctx.app.db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.id, transaction.id));
+      expect(row.deletedAt).toBeNull();
     });
 
     it('does not touch the transactions of the other accounts', async () => {

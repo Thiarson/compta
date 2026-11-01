@@ -71,6 +71,15 @@ describe('password reset', () => {
       );
     });
 
+    it('escapes the username in the email HTML', async () => {
+      const alice = await registerUser(ctx.app, { username: '<b>alice</b>' });
+      ctx.sendEmail.mockClear();
+
+      await forgot(alice.email);
+
+      expect(ctx.sendEmail.mock.lastCall![2]).toContain('Hi &lt;b&gt;alice&lt;/b&gt;,');
+    });
+
     it('answers an unknown email exactly like a known one, without sending anything', async () => {
       const alice = await registerUser(ctx.app);
       const known = await forgot(alice.email);

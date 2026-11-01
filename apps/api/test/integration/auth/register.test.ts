@@ -4,6 +4,7 @@ import { accounts, emailVerificationTokens, users } from '@compta/db';
 import { lastEmailToken, setupTestApp } from '../../helpers/app.js';
 import { API, call, cookieValue, omit } from '../../helpers/api.js';
 import { buildRegisterPayload } from '../../helpers/auth.js';
+import { failWritesTo } from '../../helpers/db.js';
 import { hashToken } from '../../../src/utils/token.js';
 
 describe('POST /auth/register', () => {
@@ -109,6 +110,26 @@ describe('POST /auth/register', () => {
     expect(res.json().user.email).toBe('alice@test.dev');
     const [row] = await ctx.app.db.select().from(users);
     expect(row.email).toBe('alice@test.dev');
+  });
+
+  it('creates no user when the default account cannot be created', async () => {
+    await failWritesTo(ctx.app, 'accounts', 'INSERT');
+
+    const res = await register(buildRegisterPayload());
+
+    expect(res.statusCode).toBe(500);
+    await expect(ctx.app.db.select().from(users)).resolves.toHaveLength(0);
+  });
+
+  it('stores the username as typed but escapes it in the email HTML', async () => {
+    const username = '<a href="https://evil.example">Win</a>';
+
+    const res = await register(buildRegisterPayload({ username }));
+
+    expect(res.json().user.username).toBe(username);
+    const emailBody = ctx.sendEmail.mock.lastCall![2];
+    expect(emailBody).toContain('Hi &lt;a href=&quot;https://evil.example&quot;&gt;Win&lt;/a&gt;,');
+    expect(emailBody).not.toContain('<a href="https://evil.example">');
   });
 
   describe('validation', () => {
