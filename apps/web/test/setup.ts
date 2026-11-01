@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 
 import { setAccessToken } from '@/lib/auth-token';
 
-import { server } from './server';
+import { server } from './helpers/server';
 
 // The router calls scrollTo on navigation; jsdom only logs "not implemented".
 window.scrollTo = () => {};

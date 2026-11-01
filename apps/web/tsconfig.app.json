@@ -5,7 +5,8 @@
     "lib": ["ES2023", "DOM"],
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@test/*": ["./test/*"]
     },
 
     /* Bundler mode */
@@ -15,5 +16,5 @@
     /* Linting */
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "test/unit", "test/helpers", "test/setup.ts"]
 }

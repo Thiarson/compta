@@ -2,15 +2,15 @@ import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderHookWithProviders } from '@/test/render';
-import { server } from '@/test/server';
+import { renderHookWithProviders } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 import {
   createAccountDeletedHandler,
   useAccount,
   useCreateAccount,
   useDeleteAccount,
-} from './account.hooks';
+} from '@/features/account/account.hooks';
 
 const accounts = [
   { id: 'a', category: 'Cash' },

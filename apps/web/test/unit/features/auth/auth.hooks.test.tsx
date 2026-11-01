@@ -4,11 +4,11 @@ import { toast } from 'sonner';
 import { describe, expect, it, vi } from 'vitest';
 
 import { getAccessToken, setAccessToken } from '@/lib/auth-token';
-import { renderHookWithProviders } from '@/test/render';
-import { server } from '@/test/server';
+import { renderHookWithProviders } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
-import { useLogin, useLogout, useRegister, useSession } from './auth.hooks';
-import { authKeys } from './auth.keys';
+import { useLogin, useLogout, useRegister, useSession } from '@/features/auth/auth.hooks';
+import { authKeys } from '@/features/auth/auth.keys';
 
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { AuthResponse } from '@compta/contracts';

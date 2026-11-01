@@ -10,9 +10,9 @@ import {
   mockTransactions,
   unverifiedUser,
   verifiedUser,
-} from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+} from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 // Counts calls to POST /auth/verify-email and answers with `respond`.
 function mockVerifyEmail(respond: () => Response) {

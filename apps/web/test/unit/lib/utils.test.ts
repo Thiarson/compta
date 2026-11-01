@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCurrency, getInitials, isSameDay, toIsoDate } from './utils';
+import { formatCurrency, getInitials, isSameDay, toIsoDate } from '@/lib/utils';
 
 // Intl output uses non-breaking spaces; compare with plain ones.
 const plain = (text: string) => text.replace(/\s/g, ' ');

@@ -10,9 +10,9 @@ import {
   mockTransactions,
   unverifiedUser,
   verifiedUser,
-} from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+} from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 const accounts = [
   { id: 'a1', category: 'Cash' },

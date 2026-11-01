@@ -1,12 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import { API_ORIGIN, WEB_PORT, WEB_URL } from './e2e/support/env';
+import { API_ORIGIN, WEB_PORT, WEB_URL } from './test/e2e/support/env';
 
 export default defineConfig({
-  testDir: './e2e',
-  globalSetup: './e2e/global-setup.ts',
+  testDir: './test/e2e',
+  globalSetup: './test/e2e/global-setup.ts',
   // One worker, in order: the API rate-limits auth routes per IP (5 registrations / 10 min,
-  // 10 logins / min), and every test shares 127.0.0.1. See e2e/support/api.ts.
+  // 10 logins / min), and every test shares 127.0.0.1. See test/e2e/support/api.ts.
   workers: 1,
   retries: 0,
   reporter: 'list',

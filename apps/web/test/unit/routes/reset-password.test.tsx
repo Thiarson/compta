@@ -2,9 +2,9 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, apiUrl } from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+import { apiError, apiUrl } from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 function mockVerifyPasswordReset(respond: () => Response) {
   const bodies: unknown[] = [];

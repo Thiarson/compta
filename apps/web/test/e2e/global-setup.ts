@@ -32,7 +32,7 @@ export default async function globalSetup() {
   const stopMailServer = await startMailServer(MAIL_PORT);
 
   const api = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], {
-    cwd: fileURLToPath(new URL('../../api', import.meta.url)),
+    cwd: fileURLToPath(new URL('../../../api', import.meta.url)),
     stdio: ['ignore', 'ignore', 'inherit'],
     env: {
       ...process.env,

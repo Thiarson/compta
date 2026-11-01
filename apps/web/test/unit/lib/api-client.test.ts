@@ -1,11 +1,11 @@
 import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { server } from '@/test/server';
+import { server } from '@test/helpers/server';
 
-import { apiFetch } from './api-client';
-import { ApiError } from './api-error';
-import { getAccessToken, setAccessToken } from './auth-token';
+import { apiFetch } from '@/lib/api-client';
+import { ApiError } from '@/lib/api-error';
+import { getAccessToken, setAccessToken } from '@/lib/auth-token';
 
 const url = (path: string) => `http://api.test/api/v1${path}`;
 

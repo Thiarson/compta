@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { apiError, apiUrl, createGate, mockSession, unverifiedUser } from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+import { apiError, apiUrl, createGate, mockSession, unverifiedUser } from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 afterEach(() => vi.useRealTimers());
 

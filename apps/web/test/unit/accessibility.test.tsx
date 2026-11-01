@@ -12,10 +12,10 @@ import {
   unverifiedUser,
   validationError,
   verifiedUser,
-} from '@/test/handlers';
-import { expectNoA11yViolations } from '@/test/a11y';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+} from '@test/helpers/handlers';
+import { expectNoA11yViolations } from '@test/helpers/a11y';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 const accounts = [
   { id: 'a1', category: 'Cash' },

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AddTransactionDialog } from './add-transaction-dialog';
+import { AddTransactionDialog } from '@/components/add-transaction-dialog';
 
 afterEach(() => vi.useRealTimers());
 

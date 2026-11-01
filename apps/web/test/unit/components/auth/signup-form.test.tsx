@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiError, apiUrl, authPayload, unverifiedUser, validationError } from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+import { apiError, apiUrl, authPayload, unverifiedUser, validationError } from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 async function fillSignup({ confirm = 'password123' }: { confirm?: string } = {}) {
   const user = userEvent.setup();

@@ -4,7 +4,7 @@ import {
   validateAuthSearch,
   validateResetPasswordSearch,
   validateVerifyEmailSearch,
-} from './auth.search';
+} from '@/features/auth/auth.search';
 
 describe('validateAuthSearch', () => {
   it('keeps a string redirect', () => {

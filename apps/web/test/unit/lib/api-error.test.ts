@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApiError, getFieldErrors } from './api-error';
+import { ApiError, getFieldErrors } from '@/lib/api-error';
 
 const validationError = (details?: unknown) =>
   new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', details);

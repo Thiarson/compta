@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { apiError, apiUrl, createGate, validationError } from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+import { apiError, apiUrl, createGate, validationError } from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 beforeEach(() => {
   server.use(

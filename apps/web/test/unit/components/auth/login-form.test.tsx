@@ -12,9 +12,9 @@ import {
   mockTransactions,
   validationError,
   verifiedUser,
-} from '@/test/handlers';
-import { renderApp } from '@/test/render';
-import { server } from '@/test/server';
+} from '@test/helpers/handlers';
+import { renderApp } from '@test/helpers/render';
+import { server } from '@test/helpers/server';
 
 async function submitLogin(email = 'jane@example.com', password = 'password123') {
   const user = userEvent.setup();
