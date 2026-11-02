@@ -3,6 +3,7 @@ import { UnauthorizedError } from '../../utils/http-error.js';
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../../constants/token.js';
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { User } from '@compta/db';
 import type { buildAuthService } from './auth.service.js';
 import type {
   LoginBody,
@@ -93,46 +94,38 @@ function setRefreshTokenCookie(reply: FastifyReply, refreshToken: string, tokenT
   });
 }
 
+function toUserResponse(user: User): MeResponse {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+  };
+}
+
 export function buildAuthController(authService: AuthService) {
+  /** Issues a new session (access token + stored refresh cookie) for a freshly authenticated user. */
+  async function startSession(reply: FastifyReply, user: User): Promise<AuthResponse> {
+    const { accessToken, refreshToken } = await signPairTokens(reply, user.id);
+
+    const tokenTtlDays = getRefreshTokenTtlDays(reply);
+    await authService.storeRefreshToken(user.id, refreshToken, tokenTtlDays);
+    setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
+
+    return { accessToken, user: toUserResponse(user) };
+  }
+
   return {
     async register(request: FastifyRequest<RegisterRoute>, reply: FastifyReply<RegisterRoute>) {
       const user = await authService.register(request.body);
-      const { accessToken, refreshToken } = await signPairTokens(reply, user.id);
 
-      const tokenTtlDays = getRefreshTokenTtlDays(reply);
-      await authService.storeRefreshToken(user.id, refreshToken, tokenTtlDays);
-
-      setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
-
-      return reply.code(201).send({
-        accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-        },
-      });
+      return reply.code(201).send(await startSession(reply, user));
     },
 
     async login(request: FastifyRequest<LoginRoute>, reply: FastifyReply<LoginRoute>) {
       const user = await authService.validateCredentials(request.body);
-      const { accessToken, refreshToken } = await signPairTokens(reply, user.id);
 
-      const tokenTtlDays = getRefreshTokenTtlDays(reply);
-      await authService.storeRefreshToken(user.id, refreshToken, tokenTtlDays);
-
-      setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
-
-      return reply.send({
-        accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-        },
-      });
+      return reply.send(await startSession(reply, user));
     },
 
     async resendVerification(
@@ -194,34 +187,15 @@ export function buildAuthController(authService: AuthService) {
       }
 
       const user = await authService.rotateRefreshToken(oldRefreshToken);
-      const { accessToken, refreshToken } = await signPairTokens(reply, user.id);
 
-      const tokenTtlDays = getRefreshTokenTtlDays(reply);
-      await authService.storeRefreshToken(user.id, refreshToken, tokenTtlDays);
-
-      setRefreshTokenCookie(reply, refreshToken, tokenTtlDays);
-
-      return reply.send({
-        accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-        },
-      });
+      return reply.send(await startSession(reply, user));
     },
 
     async me(request: FastifyRequest<MeRoute>, reply: FastifyReply<MeRoute>) {
       const { sub: userId } = request.accessTokenPayload!;
       const user = await authService.getCurrentUser(userId);
 
-      return reply.send({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-      });
+      return reply.send(toUserResponse(user));
     },
 
     async logout(request: FastifyRequest<LogoutRoute>, reply: FastifyReply<LogoutRoute>) {

@@ -119,6 +119,11 @@ export function buildAuthRepository(db: Database['db']) {
         }
 
         await tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId));
+        // A password reset must end every existing session, including a stolen one
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: new Date() })
+          .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
         return true;
       });
     },

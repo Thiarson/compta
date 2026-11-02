@@ -1,6 +1,6 @@
 import fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import emailPlugin from '../../../src/plugins/email.js';
+import emailPlugin, { SEND_TIMEOUT_MS } from '../../../src/plugins/email.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -64,6 +64,25 @@ describe('email plugin', () => {
       { err: failure, subject: 'Hello' },
       'email: delivery failed',
     );
+  });
+
+  it('gives up and resolves when the provider does not answer in time', async () => {
+    vi.useFakeTimers();
+    const logError = vi.spyOn(app.log, 'error');
+    send.mockReturnValue(new Promise(() => {}));
+
+    const sending = app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
+    await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
+
+    await expect(sending).resolves.toBeUndefined();
+    expect(logError).toHaveBeenCalledWith(
+      {
+        err: expect.objectContaining({ message: expect.stringContaining('timed out') }),
+        subject: 'Hello',
+      },
+      'email: delivery failed',
+    );
+    vi.useRealTimers();
   });
 
   it('never logs the recipient address', async () => {
