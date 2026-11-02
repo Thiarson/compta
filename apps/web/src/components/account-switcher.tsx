@@ -177,7 +177,7 @@ export function AccountSwitcher() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="text-muted-foreground opacity-0 group-hover/account-item:opacity-100 hover:text-destructive focus-visible:opacity-100"
+                          className="text-muted-foreground opacity-0 pointer-coarse:opacity-100 group-hover/account-item:opacity-100 hover:text-destructive focus-visible:opacity-100"
                           aria-label={`Delete ${account.category}`}
                           onClick={(event) => {
                             event.stopPropagation();

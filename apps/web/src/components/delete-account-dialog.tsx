@@ -49,8 +49,7 @@ export function DeleteAccountDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {account?.category}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove this account and all of its transactions. This action
-            cannot be undone.
+            This will remove this account and all of its transactions. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Field>
