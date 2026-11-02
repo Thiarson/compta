@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { toast } from 'sonner';
 
 import { AddTransactionDialog } from '@/components/add-transaction-dialog';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -30,7 +29,7 @@ import {
   useTransactions,
   type Transaction,
 } from '@/features/transaction/transaction.hooks';
-import { ApiError } from '@/lib/api-error';
+import { toastApiError } from '@/lib/api-error';
 import { cn, formatCurrency, isSameDay, toIsoDate } from '@/lib/utils';
 import { useParams } from '@tanstack/react-router';
 import {
@@ -65,10 +64,7 @@ export default function DashboardPage() {
 
   // The dialog closes on submit, so a failure can only be reported as a toast.
   function addTransaction(body: AddTransactionBody) {
-    createTransaction(body, {
-      onError: (error) =>
-        toast.error(error instanceof ApiError ? error.message : 'Something went wrong'),
-    });
+    createTransaction(body, { onError: toastApiError });
   }
 
   // Show nothing but a skeleton or an error until both loaded.
