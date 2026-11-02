@@ -73,7 +73,7 @@ function AddAccountDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>Add account</DialogTitle>
             <DialogDescription>Give your new account a name.</DialogDescription>
@@ -85,11 +85,9 @@ function AddAccountDialog({
               autoFocus
               placeholder="Business"
               required
-              minLength={2}
               maxLength={50}
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              onBlur={() => setTouched(true)}
               aria-invalid={touched && !isValid}
             />
             {touched && !isValid && (
@@ -98,7 +96,7 @@ function AddAccountDialog({
             {createAccount.isError && <FieldError>{createAccount.error.message}</FieldError>}
           </Field>
           <DialogFooter showCloseButton>
-            <Button type="submit" disabled={createAccount.isPending || (touched && !isValid)}>
+            <Button type="submit" disabled={createAccount.isPending}>
               {createAccount.isPending ? 'Creating...' : 'Create account'}
             </Button>
           </DialogFooter>
