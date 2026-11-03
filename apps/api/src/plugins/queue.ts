@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import fp from 'fastify-plugin';
 
-import { EMAIL_QUEUE } from '../constants/queue.js';
+import { EMAIL_JOB_ATTEMPTS, EMAIL_JOB_BACKOFF, EMAIL_QUEUE } from '../constants/queue.js';
 
 import type { EmailJob } from '../constants/queue.js';
 
@@ -24,6 +24,8 @@ export default fp(async function queuePlugin(app) {
     defaultJobOptions: {
       removeOnComplete: { age: 3600 }, // jobs carry tokens: don't keep them around
       removeOnFail: { age: 7 * 24 * 3600 }, // keep failures for debugging / replay
+      attempts: EMAIL_JOB_ATTEMPTS,
+      backoff: EMAIL_JOB_BACKOFF,
     },
   });
 

@@ -1,11 +1,14 @@
-import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import escapeHtml from 'escape-html';
+import { UnrecoverableError, Worker } from 'bullmq';
 
 import { EMAIL_QUEUE } from '../constants/queue.js';
+import { EmailSendError } from '../utils/email-error.js';
 
+import type { Job } from 'bullmq';
 import type { FastifyInstance } from 'fastify';
 import type { EmailJob } from '../constants/queue.js';
+import type { EmailProvider } from '../plugins/email.js';
 
 const templates = {
   'verify-email': ({ username, url }: EmailJob['params']) => ({
@@ -34,22 +37,43 @@ export function renderEmail({ template, params }: EmailJob) {
   return templates[template](params);
 }
 
+export async function processEmailJob(email: EmailProvider, job: Job<EmailJob>) {
+  const { subject, html } = renderEmail(job.data);
+
+  try {
+    await email.sendEmail(job.data.to, subject, html);
+  } catch (err) {
+    // Permanent failure: retrying can't help, so skip the remaining attempts
+    if (err instanceof EmailSendError && !err.retryable) {
+      throw new UnrecoverableError(err.message);
+    }
+    throw err;
+  }
+}
+
 export function startEmailWorker(app: FastifyInstance) {
   // `null` makes the worker keep retrying through a Redis outage instead of erroring.
   const connection = new Redis(app.config.REDIS_URL, { maxRetriesPerRequest: null });
   connection.on('error', (err) => app.log.error({ err }, 'worker: Redis connection error'));
 
-  const worker = new Worker<EmailJob>(
-    EMAIL_QUEUE,
-    async (job) => {
-      const { subject, html } = renderEmail(job.data);
-      await app.email.sendEmail(job.data.to, subject, html);
-    },
-    { connection, concurrency: 5 },
-  );
+  const worker = new Worker<EmailJob>(EMAIL_QUEUE, (job) => processEmailJob(app.email, job), {
+    connection,
+    concurrency: 5,
+  });
 
   worker.on('error', (err) => app.log.error({ err }, 'worker: email error'));
-  worker.on('failed', (job, err) => app.log.error({ err, jobId: job?.id }, 'worker: email failed'));
+  worker.on('failed', (job, err) => {
+    if (!job) return;
+
+    const fields = { err, jobId: job.id, template: job.data.template, attempt: job.attemptsMade };
+    const retriesLeft = job.attemptsMade < (job.opts.attempts ?? 1);
+
+    if (retriesLeft && !(err instanceof UnrecoverableError)) {
+      app.log.warn(fields, 'worker: email failed, will retry');
+    } else {
+      app.log.error(fields, 'worker: email failed permanently');
+    }
+  });
 
   app.addHook('onClose', async () => {
     await worker.close(); // waits for in-flight jobs

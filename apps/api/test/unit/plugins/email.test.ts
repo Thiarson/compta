@@ -40,57 +40,52 @@ describe('email plugin', () => {
     });
   });
 
-  it('logs and resolves when the provider reports an error', async () => {
-    const logError = vi.spyOn(app.log, 'error');
-    const error = { name: 'validation_error', message: 'Invalid `to` field', statusCode: 422 };
-    send.mockResolvedValue({ data: null, error });
+  it.each([429, 409, 500, 503, null])(
+    'throws a retryable error when the provider answers %s',
+    async (statusCode) => {
+      send.mockResolvedValue({
+        data: null,
+        error: { name: 'application_error', message: 'x', statusCode },
+      });
 
-    await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>')).resolves.toBeUndefined();
-    expect(logError).toHaveBeenCalledWith(
-      { err: error, subject: 'Hello' },
-      'email: delivery failed',
-    );
-  });
+      await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>')).rejects.toMatchObject({
+        name: 'EmailSendError',
+        retryable: true,
+      });
+    },
+  );
 
-  it('logs and resolves when the provider cannot be reached', async () => {
-    const logError = vi.spyOn(app.log, 'error');
+  it.each([400, 401, 403, 422])(
+    'throws a permanent error when the provider answers %s',
+    async (statusCode) => {
+      send.mockResolvedValue({
+        data: null,
+        error: { name: 'validation_error', message: 'Invalid `to` field', statusCode },
+      });
+
+      await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>')).rejects.toMatchObject({
+        message: 'validation_error: Invalid `to` field',
+        retryable: false,
+      });
+    },
+  );
+
+  it('rejects with the original error when the provider cannot be reached', async () => {
     const failure = new Error('ECONNRESET');
     send.mockRejectedValue(failure);
 
-    await expect(
-      app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>'),
-    ).resolves.toBeUndefined();
-    expect(logError).toHaveBeenCalledWith(
-      { err: failure, subject: 'Hello' },
-      'email: delivery failed',
-    );
+    await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>')).rejects.toBe(failure);
   });
 
-  it('gives up and resolves when the provider does not answer in time', async () => {
+  it('rejects when the provider does not answer in time', async () => {
     vi.useFakeTimers();
-    const logError = vi.spyOn(app.log, 'error');
     send.mockReturnValue(new Promise(() => {}));
 
-    const sending = app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
+    const sending = app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>');
+    const assertion = expect(sending).rejects.toThrow('timed out');
     await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
 
-    await expect(sending).resolves.toBeUndefined();
-    expect(logError).toHaveBeenCalledWith(
-      {
-        err: expect.objectContaining({ message: expect.stringContaining('timed out') }),
-        subject: 'Hello',
-      },
-      'email: delivery failed',
-    );
+    await assertion;
     vi.useRealTimers();
-  });
-
-  it('never logs the recipient address', async () => {
-    const logError = vi.spyOn(app.log, 'error');
-    send.mockRejectedValue(new Error('ECONNRESET'));
-
-    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
-
-    expect(JSON.stringify(logError.mock.calls)).not.toContain('alice@test.dev');
   });
 });
