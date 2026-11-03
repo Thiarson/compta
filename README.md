@@ -2,7 +2,7 @@
 
 A personal accounting app: sign up, verify your email, create accounts, and record income and expense transactions.
 
-**Stack:** pnpm + Turborepo monorepo, Fastify API, React + Vite web app, PostgreSQL (Drizzle), Redis (rate limiting).
+**Stack:** pnpm + Turborepo monorepo, Fastify API, React + Vite web app, PostgreSQL (Drizzle), Redis (rate limiting and the BullMQ email queue).
 
 ## Layout
 
@@ -32,9 +32,9 @@ docker compose up -d postgres redis
 # App config
 cp apps/api/.env.example apps/api/.env   # set DATABASE_URL, JWT secrets, EMAIL_*
 cp apps/web/.env.example apps/web/.env
+cp packages/db/.env.example packages/db/.env   # set DATABASE_URL
 
 # Migrations
-echo "DATABASE_URL=postgres://postgres:<password>@localhost:5432/compta" > packages/db/.env
 pnpm --filter @compta/db db:migrate
 
 pnpm dev
