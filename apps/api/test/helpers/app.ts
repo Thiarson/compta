@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
-import { sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
+import { notifications } from '@compta/db';
 import buildServer from '../../src/app.js';
 import { renderEmail } from '../../src/workers/email.worker.js';
 
@@ -22,8 +23,19 @@ export async function buildTestApp() {
 export async function resetDb(app: TestApp) {
   // explicit table list: `TRUNCATE users CASCADE` prints a NOTICE per cascaded table
   await app.db.execute(
-    sql`TRUNCATE users, accounts, transactions, refresh_tokens, email_verification_tokens, password_reset_tokens`,
+    sql`TRUNCATE users, accounts, transactions, refresh_tokens, email_verification_tokens, password_reset_tokens, notifications`,
   );
+}
+
+/** The user's most recent notification row. Its id is the id of the queued email job. */
+export async function latestNotification(app: TestApp, userId: string) {
+  const [row] = await app.db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(1);
+  return row;
 }
 
 export function tokenFromEmail(body: string) {

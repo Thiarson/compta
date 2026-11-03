@@ -6,6 +6,9 @@ import { EmailSendError } from '../../../src/utils/email-error.js';
 import type { Job } from 'bullmq';
 import type { EmailJob } from '../../../src/constants/queue.js';
 import type { EmailProvider } from '../../../src/plugins/email.js';
+import type { buildNotificationsRepository } from '../../../src/modules/notifications/notifications.repository.js';
+
+type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
 
 describe('renderEmail', () => {
   const params = { username: 'alice', url: 'http://app.test/x?token=abc' };
@@ -39,76 +42,75 @@ describe('processEmailJob', () => {
     template: 'verify-email',
     params: { username: 'alice', url: 'http://app.test/x?token=abc' },
   };
-  const job = { id: 'verify-email-token-1', data } as Job<EmailJob>;
+  const job = { id: 'notification-1', data } as Job<EmailJob>;
 
-  function providerThat(sendEmail: () => Promise<void>) {
-    return { sendEmail: vi.fn(sendEmail) } as unknown as EmailProvider & {
-      sendEmail: ReturnType<typeof vi.fn>;
+  function buildDeps(sendEmail: (...args: string[]) => Promise<void> = async () => {}) {
+    const email = { sendEmail: vi.fn(sendEmail) };
+    const notifications = { updateStatus: vi.fn() };
+    return {
+      email,
+      notifications,
+      run: (jobToRun: Job<EmailJob> = job) =>
+        processEmailJob(
+          email as unknown as EmailProvider,
+          notifications as unknown as NotificationsRepository,
+          jobToRun,
+        ),
     };
   }
 
-  it('sends the rendered email', async () => {
-    const email = providerThat(async () => {});
+  it('sends the rendered email, then marks the notification as sent', async () => {
+    const { run, email, notifications } = buildDeps();
 
-    await processEmailJob(email, job);
+    await run();
 
     expect(email.sendEmail).toHaveBeenCalledExactlyOnceWith(
       'alice@test.dev',
       'Verify your Compta email',
       expect.stringContaining('Hi alice,'),
-      'verify-email-token-1',
+      'notification-1',
     );
+    expect(notifications.updateStatus).toHaveBeenCalledExactlyOnceWith('notification-1', 'sent');
   });
 
   it('sends the same idempotency key every time a job is delivered', async () => {
-    const email = providerThat(async () => {});
+    const { run, email } = buildDeps();
 
-    await processEmailJob(email, job);
-    await processEmailJob(email, job); // e.g. redelivered after a worker crash
+    await run();
+    await run(); // e.g. redelivered after a worker crash
 
-    const keys = email.sendEmail.mock.calls.map((call) => call[3]);
-    expect(keys).toEqual(['verify-email-token-1', 'verify-email-token-1']);
+    expect(email.sendEmail.mock.calls.map((call) => call[3])).toEqual([
+      'notification-1',
+      'notification-1',
+    ]);
   });
 
   it('fails permanently, without sending, when the job has no id', async () => {
-    const email = providerThat(async () => {});
+    const { run, email } = buildDeps();
 
-    await expect(processEmailJob(email, { data } as Job<EmailJob>)).rejects.toBeInstanceOf(
-      UnrecoverableError,
-    );
+    await expect(run({ data } as Job<EmailJob>)).rejects.toBeInstanceOf(UnrecoverableError);
     expect(email.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('rethrows transient errors so the queue retries', async () => {
+  it('rethrows transient errors so the queue retries, leaving the notification pending', async () => {
     const failure = new EmailSendError('rate_limit_exceeded: slow down', true);
+    const { run, notifications } = buildDeps(() => Promise.reject(failure));
 
-    await expect(
-      processEmailJob(
-        providerThat(() => Promise.reject(failure)),
-        job,
-      ),
-    ).rejects.toBe(failure);
+    await expect(run()).rejects.toBe(failure);
+    expect(notifications.updateStatus).not.toHaveBeenCalled();
   });
 
   it('rethrows unknown errors (network, timeout) so the queue retries', async () => {
     const failure = new Error('ECONNRESET');
+    const { run } = buildDeps(() => Promise.reject(failure));
 
-    await expect(
-      processEmailJob(
-        providerThat(() => Promise.reject(failure)),
-        job,
-      ),
-    ).rejects.toBe(failure);
+    await expect(run()).rejects.toBe(failure);
   });
 
   it('turns a permanent error into UnrecoverableError so retries are skipped', async () => {
     const failure = new EmailSendError('validation_error: Invalid `to` field', false);
+    const { run } = buildDeps(() => Promise.reject(failure));
 
-    await expect(
-      processEmailJob(
-        providerThat(() => Promise.reject(failure)),
-        job,
-      ),
-    ).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(run()).rejects.toBeInstanceOf(UnrecoverableError);
   });
 });

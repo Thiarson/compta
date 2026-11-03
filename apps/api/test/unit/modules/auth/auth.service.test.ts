@@ -19,6 +19,7 @@ import {
 import type { Queue } from 'bullmq';
 import type { FastifyBaseLogger } from 'fastify';
 import type { buildAuthRepository } from '../../../../src/modules/auth/auth.repository.js';
+import type { buildNotificationsRepository } from '../../../../src/modules/notifications/notifications.repository.js';
 import type { buildAccountsRepository } from '../../../../src/modules/accounts/accounts.repository.js';
 import type { EmailJob } from '../../../../src/constants/queue.js';
 
@@ -28,6 +29,7 @@ vi.mock('../../../../src/utils/password.js');
 type Db = Parameters<typeof buildAuthService>[0];
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
+type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
 
 const APP_URL = 'http://localhost:5173';
 const TOKEN = 'a'.repeat(64);
@@ -57,7 +59,8 @@ describe('auth.service', () => {
     updatePassword: vi.fn(),
   };
   const accountsRepository = { createDefault: vi.fn() };
-  const TOKEN_ID = 'token-row-id';
+  const NOTIFICATION_ID = 'notification-id';
+  const notificationsRepository = { create: vi.fn() };
   const emailQueue = { add: vi.fn() };
   const log = { error: vi.fn() };
 
@@ -65,6 +68,7 @@ describe('auth.service', () => {
     db as unknown as Db,
     authRepository as unknown as AuthRepository,
     accountsRepository as unknown as AccountsRepository,
+    notificationsRepository as unknown as NotificationsRepository,
     emailQueue as unknown as Queue<EmailJob>,
     { appUrl: APP_URL, log: log as unknown as FastifyBaseLogger },
   );
@@ -72,8 +76,7 @@ describe('auth.service', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     db.transaction.mockImplementation((callback: (tx: unknown) => unknown) => callback(tx));
-    authRepository.createEmailVerificationToken.mockResolvedValue({ id: TOKEN_ID });
-    authRepository.createPasswordResetToken.mockResolvedValue({ id: TOKEN_ID });
+    notificationsRepository.create.mockResolvedValue({ id: NOTIFICATION_ID });
   });
 
   describe('register', () => {
@@ -147,20 +150,23 @@ describe('auth.service', () => {
             url: expect.stringContaining(`${APP_URL}/verify-email?token=`),
           },
         },
-        { jobId: `verify-email-${TOKEN_ID}` },
+        { jobId: NOTIFICATION_ID },
       );
     });
 
-    it('derives the job id from the token row, never from the secret token', async () => {
+    it('saves the notification with the token in one transaction and uses its id as the job id', async () => {
+      const user = buildUser();
       authRepository.findUserByEmail.mockResolvedValue(undefined);
-      authRepository.createUser.mockResolvedValue(buildUser());
+      authRepository.createUser.mockResolvedValue(user);
 
       await service.register(input);
 
-      const [, job, options] = emailQueue.add.mock.calls[0];
-      const emailedToken = renderEmail(job).html.match(/token=([a-f0-9]{64})/)![1];
-      expect(options.jobId).not.toContain(emailedToken);
-      expect(options.jobId).not.toContain(':'); // BullMQ rejects ':' in custom ids
+      expect(notificationsRepository.create).toHaveBeenCalledExactlyOnceWith(
+        { userId: user.id, type: 'verify-email' },
+        tx,
+      );
+      const [, , options] = emailQueue.add.mock.calls[0];
+      expect(options.jobId).toBe(NOTIFICATION_ID);
     });
 
     it('still registers the user when the email cannot be enqueued, and logs it', async () => {
@@ -184,6 +190,7 @@ describe('auth.service', () => {
       const emailedToken = emailBody.match(/token=([a-f0-9]{64})/)![1];
       expect(authRepository.createEmailVerificationToken).toHaveBeenCalledWith(
         expect.objectContaining({ tokenHash: hashToken(emailedToken) }),
+        tx,
       );
     });
   });
@@ -330,6 +337,7 @@ describe('auth.service', () => {
       const emailedToken = emailBody.match(/reset-password\?token=([a-f0-9]{64})/)![1];
       expect(authRepository.createPasswordResetToken).toHaveBeenCalledWith(
         expect.objectContaining({ userId: user.id, tokenHash: hashToken(emailedToken) }),
+        tx,
       );
       expect(emailQueue.add).toHaveBeenCalledWith(
         'reset-password',
@@ -339,7 +347,7 @@ describe('auth.service', () => {
             url: expect.stringContaining(`${APP_URL}/reset-password?token=`),
           }),
         }),
-        { jobId: `reset-password-${TOKEN_ID}` },
+        { jobId: NOTIFICATION_ID },
       );
     });
   });

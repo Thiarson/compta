@@ -45,33 +45,29 @@ export function buildAuthRepository(db: Database['db']) {
       return revoked.length > 0;
     },
 
-    async createEmailVerificationToken(data: NewEmailVerificationToken) {
-      return await db.transaction(async (tx) => {
+    async createEmailVerificationToken(
+      data: NewEmailVerificationToken,
+      executor: Database['db'] | DbTransaction = db,
+    ) {
+      await executor.transaction(async (tx) => {
         await tx
           .update(emailVerificationTokens)
           .set({ invalidatedAt: new Date() })
           .where(eq(emailVerificationTokens.userId, data.userId));
-        const result = await tx
-          .insert(emailVerificationTokens)
-          .values(data)
-          .returning({ id: emailVerificationTokens.id });
-
-        return result[0];
+        await tx.insert(emailVerificationTokens).values(data);
       });
     },
 
-    async createPasswordResetToken(data: NewPasswordResetToken) {
-      return await db.transaction(async (tx) => {
+    async createPasswordResetToken(
+      data: NewPasswordResetToken,
+      executor: Database['db'] | DbTransaction = db,
+    ) {
+      await executor.transaction(async (tx) => {
         await tx
           .update(passwordResetTokens)
           .set({ invalidatedAt: new Date() })
           .where(eq(passwordResetTokens.userId, data.userId));
-        const result = await tx
-          .insert(passwordResetTokens)
-          .values(data)
-          .returning({ id: passwordResetTokens.id });
-
-        return result[0];
+        await tx.insert(passwordResetTokens).values(data);
       });
     },
 

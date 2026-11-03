@@ -18,9 +18,11 @@ import type { EmailJob } from '../../constants/queue.js';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
 import type { buildAccountsRepository } from '../accounts/accounts.repository.js';
+import type { buildNotificationsRepository } from '../notifications/notifications.repository.js';
 
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
+type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
 
 type EmailRecipient = { email: string; username: string };
 
@@ -33,6 +35,7 @@ export function buildAuthService(
   db: Database['db'],
   authRepository: AuthRepository,
   accountsRepository: AccountsRepository,
+  notificationsRepository: NotificationsRepository,
   emailQueue: Queue<EmailJob>,
   config: AuthServiceConfig,
 ) {
@@ -52,27 +55,55 @@ export function buildAuthService(
     return { token, expiresAt, passwordResetUrl };
   }
 
-  // Delivery is best-effort: a queue outage is logged and never thrown, so it can't fail a request.
-  // `tokenId` makes the job id unique per token row, so enqueueing the same email twice adds one job
-  // while a later resend (a new token) is not dropped.
-  async function enqueueEmail(tokenId: string, job: EmailJob) {
+  // The token and its notification are saved together, so every emailed link has a notification row.
+  async function createVerificationNotification(userId: string) {
+    const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+    const notification = await db.transaction(async (tx) => {
+      await authRepository.createEmailVerificationToken(
+        { userId, tokenHash: hashToken(token), expiresAt },
+        tx,
+      );
+      return notificationsRepository.create({ userId, type: 'verify-email' }, tx);
+    });
+
+    return { notificationId: notification.id, verificationUrl };
+  }
+
+  async function createPasswordResetNotification(userId: string) {
+    const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
+
+    const notification = await db.transaction(async (tx) => {
+      await authRepository.createPasswordResetToken(
+        { userId, tokenHash: hashToken(token), expiresAt },
+        tx,
+      );
+      return notificationsRepository.create({ userId, type: 'reset-password' }, tx);
+    });
+
+    return { notificationId: notification.id, passwordResetUrl };
+  }
+
+  // Delivery is best-effort: The job id is the notification id, so enqueueing the same notification twice adds one job,
+  // while a later resend (a new notification) is not dropped.
+  async function enqueueEmail(notificationId: string, job: EmailJob) {
     try {
-      await emailQueue.add(job.template, job, { jobId: `${job.template}-${tokenId}` });
+      await emailQueue.add(job.template, job, { jobId: notificationId });
     } catch (err) {
       config.log.error({ err, template: job.template }, 'email: failed to enqueue');
     }
   }
 
-  function sendVerificationEmail(tokenId: string, user: EmailRecipient, url: string) {
-    return enqueueEmail(tokenId, {
+  function sendVerificationEmail(notificationId: string, user: EmailRecipient, url: string) {
+    return enqueueEmail(notificationId, {
       to: user.email,
       template: 'verify-email',
       params: { username: user.username, url },
     });
   }
 
-  function sendPasswordResetEmail(tokenId: string, user: EmailRecipient, url: string) {
-    return enqueueEmail(tokenId, {
+  function sendPasswordResetEmail(notificationId: string, user: EmailRecipient, url: string) {
+    return enqueueEmail(notificationId, {
       to: user.email,
       template: 'reset-password',
       params: { username: user.username, url },
@@ -101,15 +132,8 @@ export function buildAuthService(
         throw err;
       }
 
-      const { token, expiresAt, verificationUrl } = generateVerificationToken();
-
-      const emailVerificationToken = await authRepository.createEmailVerificationToken({
-        userId: newUser.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendVerificationEmail(emailVerificationToken.id, { email, username }, verificationUrl);
+      const { notificationId, verificationUrl } = await createVerificationNotification(newUser.id);
+      await sendVerificationEmail(notificationId, { email, username }, verificationUrl);
 
       return newUser;
     },
@@ -147,15 +171,8 @@ export function buildAuthService(
         throw new ConflictError('Email already verified');
       }
 
-      const { token, expiresAt, verificationUrl } = generateVerificationToken();
-
-      const emailVerificationToken = await authRepository.createEmailVerificationToken({
-        userId: user.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendVerificationEmail(emailVerificationToken.id, user, verificationUrl);
+      const { notificationId, verificationUrl } = await createVerificationNotification(user.id);
+      await sendVerificationEmail(notificationId, user, verificationUrl);
     },
 
     async verifyEmailToken(verificationToken: string) {
@@ -187,15 +204,8 @@ export function buildAuthService(
         return;
       }
 
-      const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
-
-      const passwordResetToken = await authRepository.createPasswordResetToken({
-        userId: user.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendPasswordResetEmail(passwordResetToken.id, user, passwordResetUrl);
+      const { notificationId, passwordResetUrl } = await createPasswordResetNotification(user.id);
+      await sendPasswordResetEmail(notificationId, user, passwordResetUrl);
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {

@@ -2,6 +2,7 @@ import { buildAuthService } from './auth.service.js';
 import { buildAuthRepository } from './auth.repository.js';
 import { buildAuthController } from './auth.controller.js';
 import { buildAccountsRepository } from '../accounts/accounts.repository.js';
+import { buildNotificationsRepository } from '../notifications/notifications.repository.js';
 import {
   authCreatedResponseSchema,
   authResponseSchema,
@@ -39,10 +40,18 @@ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 const authRoute: FastifyPluginAsyncTypebox = async (app) => {
   const authRepository = buildAuthRepository(app.db);
   const accountsRepository = buildAccountsRepository(app.db);
-  const authService = buildAuthService(app.db, authRepository, accountsRepository, app.emailQueue, {
-    appUrl: app.config.APP_URL,
-    log: app.log,
-  });
+  const notificationsRepository = buildNotificationsRepository(app.db);
+  const authService = buildAuthService(
+    app.db,
+    authRepository,
+    accountsRepository,
+    notificationsRepository,
+    app.emailQueue,
+    {
+      appUrl: app.config.APP_URL,
+      log: app.log,
+    },
+  );
   const authController = buildAuthController(authService);
 
   app.post<RegisterRoute>(

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { accounts, emailVerificationTokens, users } from '@compta/db';
-import { lastEmailToken, setupTestApp } from '../../helpers/app.js';
+import { lastEmailToken, latestNotification, setupTestApp } from '../../helpers/app.js';
 import { API, call, cookieValue, omit } from '../../helpers/api.js';
 import { buildRegisterPayload } from '../../helpers/auth.js';
 import { failWritesTo } from '../../helpers/db.js';
@@ -70,11 +70,13 @@ describe('POST /auth/register', () => {
 
     const res = await register(payload);
 
+    const notification = await latestNotification(ctx.app, res.json().user.id);
+    expect(notification).toMatchObject({ type: 'verify-email', status: 'pending' });
     expect(ctx.sendEmail).toHaveBeenCalledExactlyOnceWith(
       payload.email,
       expect.any(String),
       expect.stringContaining('/verify-email?token='),
-      expect.stringMatching(/^verify-email-[0-9a-f-]{36}$/), // job id: template + token row uuid
+      notification.id, // the queued job is the notification
     );
     const token = lastEmailToken(ctx.sendEmail);
     const [row] = await ctx.app.db

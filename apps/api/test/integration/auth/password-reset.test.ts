@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { passwordResetTokens } from '@compta/db';
-import { lastEmailToken, setupTestApp } from '../../helpers/app.js';
+import { lastEmailToken, latestNotification, setupTestApp } from '../../helpers/app.js';
 import { API, call, cookieValue } from '../../helpers/api.js';
 import { login, registerUser } from '../../helpers/auth.js';
 import { hashToken } from '../../../src/utils/token.js';
@@ -49,11 +49,13 @@ describe('password reset', () => {
       const res = await forgot(alice.email);
 
       expect(res.statusCode).toBe(204);
+      const notification = await latestNotification(ctx.app, alice.user.id);
+      expect(notification).toMatchObject({ type: 'reset-password', status: 'pending' });
       expect(ctx.sendEmail).toHaveBeenCalledExactlyOnceWith(
         alice.email,
         expect.any(String),
         expect.stringContaining('/reset-password?token='),
-        expect.stringMatching(/^reset-password-[0-9a-f-]{36}$/), // job id: template + token row uuid
+        notification.id,
       );
       const row = await tokenRow(lastEmailToken(ctx.sendEmail));
       expect(row).toMatchObject({ userId: alice.user.id, usedAt: null, invalidatedAt: null });
@@ -69,7 +71,7 @@ describe('password reset', () => {
         alice.email,
         expect.any(String),
         expect.any(String),
-        expect.stringMatching(/^reset-password-[0-9a-f-]{36}$/), // job id: template + token row uuid
+        expect.any(String),
       );
     });
 
