@@ -3,11 +3,20 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { notifications } from '@compta/db';
 import buildServer from '../../src/app.js';
 import { renderEmail } from '../../src/workers/email.worker.js';
+import { publishPendingEvents } from '../../src/workers/event.relay.js';
+import { buildEventsRepository } from '../../src/modules/notifications/events.repository.js';
 
 export type TestApp = Awaited<ReturnType<typeof buildServer>>;
 
 export async function buildTestApp() {
   const app = await buildServer({ logger: false });
+  // Stand in for the relay's timer: publish what the request saved before its response is returned,
+  // so tests can read the email right after a request
+  const eventsRepository = buildEventsRepository(app.db);
+  app.addHook('onSend', async (_request, _reply, payload) => {
+    await publishPendingEvents(app.db, eventsRepository, app.emailQueue);
+    return payload;
+  });
   await app.ready();
   // Never call Resend; capture emails so tests can read the tokens in them
   const sendEmail = vi.spyOn(app.email, 'sendEmail').mockResolvedValue();
@@ -23,7 +32,7 @@ export async function buildTestApp() {
 export async function resetDb(app: TestApp) {
   // explicit table list: `TRUNCATE users CASCADE` prints a NOTICE per cascaded table
   await app.db.execute(
-    sql`TRUNCATE users, accounts, transactions, refresh_tokens, email_verification_tokens, password_reset_tokens, notifications`,
+    sql`TRUNCATE users, accounts, transactions, refresh_tokens, email_verification_tokens, password_reset_tokens, notifications, events`,
   );
 }
 

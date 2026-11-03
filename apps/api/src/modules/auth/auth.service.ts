@@ -11,24 +11,23 @@ import {
 } from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
-import type { Queue } from 'bullmq';
-import type { Database } from '@compta/db';
-import type { FastifyBaseLogger } from 'fastify';
 import type { EmailJob } from '../../constants/queue.js';
+import type { Database, DbTransaction } from '@compta/db';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
 import type { buildAccountsRepository } from '../accounts/accounts.repository.js';
+import type { buildEventsRepository } from '../notifications/events.repository.js';
 import type { buildNotificationsRepository } from '../notifications/notifications.repository.js';
 
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
+type EventsRepository = ReturnType<typeof buildEventsRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
 type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
 
-type EmailRecipient = { email: string; username: string };
+type EmailRecipient = { id: string; email: string; username: string };
 
 interface AuthServiceConfig {
   appUrl: string;
-  log: FastifyBaseLogger;
 }
 
 export function buildAuthService(
@@ -36,7 +35,7 @@ export function buildAuthService(
   authRepository: AuthRepository,
   accountsRepository: AccountsRepository,
   notificationsRepository: NotificationsRepository,
-  emailQueue: Queue<EmailJob>,
+  eventsRepository: EventsRepository,
   config: AuthServiceConfig,
 ) {
   function generateVerificationToken() {
@@ -55,59 +54,48 @@ export function buildAuthService(
     return { token, expiresAt, passwordResetUrl };
   }
 
-  // The token and its notification are saved together, so every emailed link has a notification row.
-  async function createVerificationNotification(userId: string) {
+  async function queueEmail(user: EmailRecipient, job: EmailJob, tx: DbTransaction) {
+    const notification = await notificationsRepository.create(
+      { userId: user.id, type: job.template },
+      tx,
+    );
+    await eventsRepository.create({ eventId: notification.id, payload: job }, tx);
+  }
+
+  async function queueVerificationEmail(user: EmailRecipient, tx: DbTransaction) {
     const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
-    const notification = await db.transaction(async (tx) => {
-      await authRepository.createEmailVerificationToken(
-        { userId, tokenHash: hashToken(token), expiresAt },
-        tx,
-      );
-      return notificationsRepository.create({ userId, type: 'verify-email' }, tx);
-    });
-
-    return { notificationId: notification.id, verificationUrl };
+    await authRepository.createEmailVerificationToken(
+      { userId: user.id, tokenHash: hashToken(token), expiresAt },
+      tx,
+    );
+    await queueEmail(
+      user,
+      {
+        to: user.email,
+        template: 'verify-email',
+        params: { username: user.username, url: verificationUrl },
+      },
+      tx,
+    );
   }
 
-  async function createPasswordResetNotification(userId: string) {
+  async function queuePasswordResetEmail(user: EmailRecipient, tx: DbTransaction) {
     const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
 
-    const notification = await db.transaction(async (tx) => {
-      await authRepository.createPasswordResetToken(
-        { userId, tokenHash: hashToken(token), expiresAt },
-        tx,
-      );
-      return notificationsRepository.create({ userId, type: 'reset-password' }, tx);
-    });
-
-    return { notificationId: notification.id, passwordResetUrl };
-  }
-
-  // Delivery is best-effort: The job id is the notification id, so enqueueing the same notification twice adds one job,
-  // while a later resend (a new notification) is not dropped.
-  async function enqueueEmail(notificationId: string, job: EmailJob) {
-    try {
-      await emailQueue.add(job.template, job, { jobId: notificationId });
-    } catch (err) {
-      config.log.error({ err, template: job.template }, 'email: failed to enqueue');
-    }
-  }
-
-  function sendVerificationEmail(notificationId: string, user: EmailRecipient, url: string) {
-    return enqueueEmail(notificationId, {
-      to: user.email,
-      template: 'verify-email',
-      params: { username: user.username, url },
-    });
-  }
-
-  function sendPasswordResetEmail(notificationId: string, user: EmailRecipient, url: string) {
-    return enqueueEmail(notificationId, {
-      to: user.email,
-      template: 'reset-password',
-      params: { username: user.username, url },
-    });
+    await authRepository.createPasswordResetToken(
+      { userId: user.id, tokenHash: hashToken(token), expiresAt },
+      tx,
+    );
+    await queueEmail(
+      user,
+      {
+        to: user.email,
+        template: 'reset-password',
+        params: { username: user.username, url: passwordResetUrl },
+      },
+      tx,
+    );
   }
 
   return {
@@ -124,6 +112,7 @@ export function buildAuthService(
         newUser = await db.transaction(async (tx) => {
           const user = await authRepository.createUser({ username, email, passwordHash }, tx);
           await accountsRepository.createDefault(user.id, tx);
+          await queueVerificationEmail(user, tx);
           return user;
         });
       } catch (err) {
@@ -131,9 +120,6 @@ export function buildAuthService(
         if (isUniqueViolation(err)) throw new ConflictError('Email already in use');
         throw err;
       }
-
-      const { notificationId, verificationUrl } = await createVerificationNotification(newUser.id);
-      await sendVerificationEmail(notificationId, { email, username }, verificationUrl);
 
       return newUser;
     },
@@ -171,8 +157,7 @@ export function buildAuthService(
         throw new ConflictError('Email already verified');
       }
 
-      const { notificationId, verificationUrl } = await createVerificationNotification(user.id);
-      await sendVerificationEmail(notificationId, user, verificationUrl);
+      await db.transaction((tx) => queueVerificationEmail(user, tx));
     },
 
     async verifyEmailToken(verificationToken: string) {
@@ -204,8 +189,7 @@ export function buildAuthService(
         return;
       }
 
-      const { notificationId, passwordResetUrl } = await createPasswordResetNotification(user.id);
-      await sendPasswordResetEmail(notificationId, user, passwordResetUrl);
+      await db.transaction((tx) => queuePasswordResetEmail(user, tx));
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {

@@ -16,9 +16,8 @@ import {
   buildUser,
 } from '../../../helpers/fixtures.js';
 
-import type { Queue } from 'bullmq';
-import type { FastifyBaseLogger } from 'fastify';
 import type { buildAuthRepository } from '../../../../src/modules/auth/auth.repository.js';
+import type { buildEventsRepository } from '../../../../src/modules/notifications/events.repository.js';
 import type { buildNotificationsRepository } from '../../../../src/modules/notifications/notifications.repository.js';
 import type { buildAccountsRepository } from '../../../../src/modules/accounts/accounts.repository.js';
 import type { EmailJob } from '../../../../src/constants/queue.js';
@@ -29,6 +28,7 @@ vi.mock('../../../../src/utils/password.js');
 type Db = Parameters<typeof buildAuthService>[0];
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
+type EventsRepository = ReturnType<typeof buildEventsRepository>;
 type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
 
 const APP_URL = 'http://localhost:5173';
@@ -61,17 +61,19 @@ describe('auth.service', () => {
   const accountsRepository = { createDefault: vi.fn() };
   const NOTIFICATION_ID = 'notification-id';
   const notificationsRepository = { create: vi.fn() };
-  const emailQueue = { add: vi.fn() };
-  const log = { error: vi.fn() };
+  const eventsRepository = { create: vi.fn() };
 
   const service = buildAuthService(
     db as unknown as Db,
     authRepository as unknown as AuthRepository,
     accountsRepository as unknown as AccountsRepository,
     notificationsRepository as unknown as NotificationsRepository,
-    emailQueue as unknown as Queue<EmailJob>,
-    { appUrl: APP_URL, log: log as unknown as FastifyBaseLogger },
+    eventsRepository as unknown as EventsRepository,
+    { appUrl: APP_URL },
   );
+
+  /** The email job the service saved for the relay to publish. */
+  const savedJob = () => eventsRepository.create.mock.calls[0][0].payload as EmailJob;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -90,7 +92,7 @@ describe('auth.service', () => {
       );
       expect(hashPassword).not.toHaveBeenCalled();
       expect(authRepository.createUser).not.toHaveBeenCalled();
-      expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(eventsRepository.create).not.toHaveBeenCalled();
     });
 
     it('throws ConflictError when a concurrent request registers the same email first', async () => {
@@ -103,7 +105,7 @@ describe('auth.service', () => {
       await expect(service.register(input)).rejects.toThrow(
         new ConflictError('Email already in use'),
       );
-      expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(eventsRepository.create).not.toHaveBeenCalled();
     });
 
     it('rethrows other database errors unchanged', async () => {
@@ -127,7 +129,7 @@ describe('auth.service', () => {
       );
     });
 
-    it('creates the user and default account in one transaction, then sends a verification email', async () => {
+    it('creates the user, default account and verification email in one transaction', async () => {
       const user = buildUser();
       authRepository.findUserByEmail.mockResolvedValue(undefined);
       vi.mocked(hashPassword).mockResolvedValue('hashed-password');
@@ -140,44 +142,32 @@ describe('auth.service', () => {
         tx,
       );
       expect(accountsRepository.createDefault).toHaveBeenCalledWith(user.id, tx);
-      expect(emailQueue.add).toHaveBeenCalledExactlyOnceWith(
-        'verify-email',
-        {
-          to: 'alice@test.dev',
-          template: 'verify-email',
-          params: {
-            username: 'alice',
-            url: expect.stringContaining(`${APP_URL}/verify-email?token=`),
-          },
-        },
-        { jobId: NOTIFICATION_ID },
-      );
-    });
-
-    it('saves the notification with the token in one transaction and uses its id as the job id', async () => {
-      const user = buildUser();
-      authRepository.findUserByEmail.mockResolvedValue(undefined);
-      authRepository.createUser.mockResolvedValue(user);
-
-      await service.register(input);
-
       expect(notificationsRepository.create).toHaveBeenCalledExactlyOnceWith(
         { userId: user.id, type: 'verify-email' },
         tx,
       );
-      const [, , options] = emailQueue.add.mock.calls[0];
-      expect(options.jobId).toBe(NOTIFICATION_ID);
+      expect(eventsRepository.create).toHaveBeenCalledExactlyOnceWith(
+        {
+          eventId: NOTIFICATION_ID, // the relay uses it as the job id
+          payload: {
+            to: 'alice@test.dev',
+            template: 'verify-email',
+            params: {
+              username: 'alice',
+              url: expect.stringContaining(`${APP_URL}/verify-email?token=`),
+            },
+          },
+        },
+        tx,
+      );
     });
 
-    it('still registers the user when the email cannot be enqueued, and logs it', async () => {
-      const user = buildUser();
+    it('does not register the user when the email cannot be saved', async () => {
       authRepository.findUserByEmail.mockResolvedValue(undefined);
-      authRepository.createUser.mockResolvedValue(user);
-      emailQueue.add.mockRejectedValue(new Error('redis down'));
+      authRepository.createUser.mockResolvedValue(buildUser());
+      eventsRepository.create.mockRejectedValue(new Error('db down'));
 
-      await expect(service.register(input)).resolves.toBe(user);
-
-      expect(log.error).toHaveBeenCalled();
+      await expect(service.register(input)).rejects.toThrow('db down');
     });
 
     it('stores only the hash of the verification token that is emailed', async () => {
@@ -186,7 +176,7 @@ describe('auth.service', () => {
 
       await service.register(input);
 
-      const emailBody = renderEmail(emailQueue.add.mock.calls[0][1]).html;
+      const emailBody = renderEmail(savedJob()).html;
       const emailedToken = emailBody.match(/token=([a-f0-9]{64})/)![1];
       expect(authRepository.createEmailVerificationToken).toHaveBeenCalledWith(
         expect.objectContaining({ tokenHash: hashToken(emailedToken) }),
@@ -324,7 +314,7 @@ describe('auth.service', () => {
 
       await expect(service.forgotPassword('alice@test.dev')).resolves.toBeUndefined();
       expect(authRepository.createPasswordResetToken).not.toHaveBeenCalled();
-      expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(eventsRepository.create).not.toHaveBeenCalled();
     });
 
     it('stores a hashed token and emails the reset link for an active user', async () => {
@@ -333,21 +323,24 @@ describe('auth.service', () => {
 
       await service.forgotPassword(user.email);
 
-      const emailBody = renderEmail(emailQueue.add.mock.calls[0][1]).html;
+      const emailBody = renderEmail(savedJob()).html;
       const emailedToken = emailBody.match(/reset-password\?token=([a-f0-9]{64})/)![1];
       expect(authRepository.createPasswordResetToken).toHaveBeenCalledWith(
         expect.objectContaining({ userId: user.id, tokenHash: hashToken(emailedToken) }),
         tx,
       );
-      expect(emailQueue.add).toHaveBeenCalledWith(
-        'reset-password',
-        expect.objectContaining({
-          to: user.email,
-          params: expect.objectContaining({
-            url: expect.stringContaining(`${APP_URL}/reset-password?token=`),
+      expect(eventsRepository.create).toHaveBeenCalledWith(
+        {
+          eventId: NOTIFICATION_ID,
+          payload: expect.objectContaining({
+            to: user.email,
+            template: 'reset-password',
+            params: expect.objectContaining({
+              url: expect.stringContaining(`${APP_URL}/reset-password?token=`),
+            }),
           }),
-        }),
-        { jobId: NOTIFICATION_ID },
+        },
+        tx,
       );
     });
   });

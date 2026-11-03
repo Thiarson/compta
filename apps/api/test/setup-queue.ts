@@ -12,3 +12,10 @@ vi.mock('bullmq', () => ({
     close = vi.fn();
   },
 }));
+
+// Events are published by the `onSend` hook in helpers/app.ts, so the relay's timer must not run
+// too: it would publish the same events at the same time.
+vi.mock('../src/workers/event.relay.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/workers/event.relay.js')>()),
+  startEventRelay: vi.fn(),
+}));
