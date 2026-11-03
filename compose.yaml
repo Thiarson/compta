@@ -69,6 +69,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # BullMQ needs durable, never-evicted keys (AOF + noeviction), or queued jobs can be lost
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
     ports:
       - '127.0.0.1:6379:6379' # loopback only: Redis has no password here
     volumes:

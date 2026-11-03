@@ -1,4 +1,3 @@
-import escapeHtml from 'escape-html';
 import { daysToMs } from '../../utils/time.js';
 import { normalizeEmail } from '../../utils/email.js';
 import { isUniqueViolation } from '../../utils/db-error.js';
@@ -12,8 +11,10 @@ import {
 } from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
+import type { Queue } from 'bullmq';
 import type { Database } from '@compta/db';
-import type { EmailProvider } from '../../plugins/email.js';
+import type { FastifyBaseLogger } from 'fastify';
+import type { EmailJob } from '../../constants/queue.js';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
 import type { buildAccountsRepository } from '../accounts/accounts.repository.js';
@@ -23,13 +24,14 @@ type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
 
 interface AuthServiceConfig {
   appUrl: string;
+  log: FastifyBaseLogger;
 }
 
 export function buildAuthService(
   db: Database['db'],
   authRepository: AuthRepository,
   accountsRepository: AccountsRepository,
-  emailProvider: EmailProvider,
+  emailQueue: Queue<EmailJob>,
   config: AuthServiceConfig,
 ) {
   function generateVerificationToken() {
@@ -48,32 +50,21 @@ export function buildAuthService(
     return { token, expiresAt, passwordResetUrl };
   }
 
-  async function sendVerificationEmail(email: string, username: string, verificationUrl: string) {
-    await emailProvider.sendEmail(
-      email,
-      'Verify your Compta email',
-      `
-        <p>Hi ${escapeHtml(username)},</p>
-        <p>Click the link below to verify your email address. This link expires in 8 hours.</p>
-        <p><a href="${verificationUrl}">Verify my email</a></p>
-        <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
-        <p>If you didn't create an account, you can ignore this email.</p>
-      `,
-    );
+  // Delivery is best-effort: a queue outage is logged and never thrown, so it can't fail a request
+  async function enqueueEmail(job: EmailJob) {
+    try {
+      await emailQueue.add(job.template, job);
+    } catch (err) {
+      config.log.error({ err, template: job.template }, 'email: failed to enqueue');
+    }
   }
 
-  async function sendPasswordResetEmail(email: string, username: string, passwordResetUrl: string) {
-    await emailProvider.sendEmail(
-      email,
-      'Reset your Compta password',
-      `
-        <p>Hi ${escapeHtml(username)},</p>
-        <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
-        <p><a href="${passwordResetUrl}">Reset my password</a></p>
-        <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
-        <p>If you didn't request a password reset, you can ignore this email.</p>
-      `,
-    );
+  function sendVerificationEmail(email: string, username: string, url: string) {
+    return enqueueEmail({ to: email, template: 'verify-email', params: { username, url } });
+  }
+
+  function sendPasswordResetEmail(email: string, username: string, url: string) {
+    return enqueueEmail({ to: email, template: 'reset-password', params: { username, url } });
   }
 
   return {

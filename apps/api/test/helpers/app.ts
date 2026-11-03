@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { sql } from 'drizzle-orm';
 import buildServer from '../../src/app.js';
+import { renderEmail } from '../../src/workers/email.worker.js';
 
 export type TestApp = Awaited<ReturnType<typeof buildServer>>;
 
@@ -9,6 +10,12 @@ export async function buildTestApp() {
   await app.ready();
   // Never call Resend; capture emails so tests can read the tokens in them
   const sendEmail = vi.spyOn(app.email, 'sendEmail').mockResolvedValue();
+  // Stand in for the worker: render each enqueued job and "send" it right away
+  vi.spyOn(app.emailQueue, 'add').mockImplementation(async (_name, job) => {
+    const { subject, html } = renderEmail(job);
+    await app.email.sendEmail(job.to, subject, html);
+    return {} as never;
+  });
   return { app, sendEmail };
 }
 

@@ -9,20 +9,14 @@ const REQUIRED_WITHOUT_DEFAULT = {
   APP_URL: 'http://localhost:5173',
   ALLOWED_ORIGINS: 'http://localhost:5173',
   DATABASE_URL: 'postgres://user:pass@localhost:5432/compta',
+  REDIS_URL: 'redis://localhost:6379',
   JWT_ACCESS_TOKEN_SECRET: 'test-access-secret-at-least-32-chars!!',
   JWT_REFRESH_TOKEN_SECRET: 'test-refresh-secret-at-least-32-chars!',
   EMAIL_FROM: 'test@compta.dev',
   EMAIL_API_KEY: 're_test_dummy',
 };
 
-const WITH_DEFAULT = [
-  'NODE_ENV',
-  'HOST',
-  'PORT',
-  'ACCESS_TOKEN_TTL',
-  'REFRESH_TOKEN_TTL_DAYS',
-  'REDIS_URL',
-];
+const WITH_DEFAULT = ['NODE_ENV', 'HOST', 'PORT', 'ACCESS_TOKEN_TTL', 'REFRESH_TOKEN_TTL_DAYS'];
 
 const ALL_VARIABLES = [...Object.keys(REQUIRED_WITHOUT_DEFAULT), ...WITH_DEFAULT];
 
@@ -84,19 +78,13 @@ describe('env config', () => {
       });
     });
 
-    it('leaves REDIS_URL undefined when it is not set', async () => {
-      const config = await loadConfig();
-
-      expect(config.REDIS_URL).toBeUndefined();
-    });
-
     it('prefers explicit values over defaults', async () => {
       vi.stubEnv('NODE_ENV', 'production');
       vi.stubEnv('HOST', '127.0.0.1');
       vi.stubEnv('PORT', '3000');
       vi.stubEnv('ACCESS_TOKEN_TTL', '5m');
       vi.stubEnv('REFRESH_TOKEN_TTL_DAYS', '7');
-      vi.stubEnv('REDIS_URL', 'redis://localhost:6379');
+      vi.stubEnv('REDIS_URL', 'redis://cache:6379');
 
       await expect(loadConfig()).resolves.toMatchObject({
         NODE_ENV: 'production',
@@ -104,7 +92,7 @@ describe('env config', () => {
         PORT: '3000',
         ACCESS_TOKEN_TTL: '5m',
         REFRESH_TOKEN_TTL_DAYS: 7,
-        REDIS_URL: 'redis://localhost:6379',
+        REDIS_URL: 'redis://cache:6379',
       });
     });
   });
