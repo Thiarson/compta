@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { authApi } from './auth.api';
 import { authKeys } from './auth.keys';
 import { sessionQueryOptions } from './auth.queries';
+import { toastApiError } from '../../lib/api-error';
 import { setAccessToken } from '../../lib/auth-token';
 
 import type { AuthResponse } from '@compta/contracts';
@@ -58,6 +59,7 @@ export function useLogout() {
       router.navigate({ to: '/login' });
       toast.success('Signed out');
     },
+    onError: toastApiError,
   });
 }
 

@@ -117,18 +117,32 @@ describe('Adding an account', () => {
     expect(await screen.findByLabelText('Account name')).toHaveValue('');
   });
 
-  it('flags a name that is too short', async () => {
+  it('flags a name that is too short only once the user tries to create it', async () => {
     const { user, store } = await renderSwitcher();
 
     const dialog = await openAddDialog(user);
     await user.type(within(dialog).getByLabelText('Account name'), 'a');
-    await user.tab();
+    await user.click(within(dialog).getByRole('heading', { name: 'Add account' }));
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Create account' }));
 
     expect(
       await within(dialog).findByText('Account name must be at least 2 characters'),
     ).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Create account' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Create account' })).toBeEnabled();
     expect(store.posted).toEqual([]);
+  });
+
+  it('clears the error as soon as the name becomes valid', async () => {
+    const { user } = await renderSwitcher();
+    const dialog = await openAddDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Create account' }));
+    expect(await within(dialog).findByRole('alert')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('Account name'), 'Bank');
+
+    expect(within(dialog).queryByRole('alert')).toBeNull();
   });
 
   it('rejects a blank name made only of spaces', async () => {

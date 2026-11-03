@@ -3,7 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiError, apiUrl, mockAccounts, mockSession, verifiedUser } from '@test/helpers/handlers';
+import {
+  apiError,
+  apiUrl,
+  createGate,
+  mockAccounts,
+  mockSession,
+  verifiedUser,
+} from '@test/helpers/handlers';
 import { renderApp } from '@test/helpers/render';
 import { server } from '@test/helpers/server';
 
@@ -103,6 +110,41 @@ describe('Dashboard summary', () => {
     expect(await screen.findByText('Other account')).toBeInTheDocument();
     expect(screen.queryByText('Salary')).toBeNull();
     expect(screen.getAllByText('99 999 Ar')).not.toHaveLength(0);
+  });
+});
+
+describe('Dashboard loading and errors', () => {
+  it('shows no balance until the transactions have loaded', async () => {
+    const gate = createGate();
+    mockSession(verifiedUser);
+    mockAccounts(accounts);
+    server.use(
+      http.get(apiUrl('/transactions'), async () => {
+        await gate.opened;
+        return HttpResponse.json(transactions);
+      }),
+    );
+
+    await renderApp('/accounts/a1');
+
+    expect(screen.queryByText('Balance')).not.toBeInTheDocument();
+    gate.open();
+    expect(await screen.findByText('Balance')).toBeInTheDocument();
+  });
+
+  it('offers a retry instead of a zero balance when the transactions fail to load', async () => {
+    mockSession(verifiedUser);
+    mockAccounts(accounts);
+    server.use(http.get(apiUrl('/transactions'), () => apiError(500, 'INTERNAL', 'Database down')));
+    const user = userEvent.setup();
+    await renderApp('/accounts/a1');
+    expect(await screen.findByText("Couldn't load your data")).toBeInTheDocument();
+    expect(screen.queryByText('Balance')).not.toBeInTheDocument();
+
+    server.use(http.get(apiUrl('/transactions'), () => HttpResponse.json(transactions)));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Balance')).toBeInTheDocument();
   });
 });
 

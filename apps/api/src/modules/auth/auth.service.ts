@@ -1,4 +1,3 @@
-import escapeHtml from 'escape-html';
 import { daysToMs } from '../../utils/time.js';
 import { normalizeEmail } from '../../utils/email.js';
 import { isUniqueViolation } from '../../utils/db-error.js';
@@ -12,14 +11,20 @@ import {
 } from '../../utils/http-error.js';
 import { EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from '../../constants/token.js';
 
-import type { Database } from '@compta/db';
-import type { EmailProvider } from '../../plugins/email.js';
+import type { EmailJob } from '../../constants/queue.js';
+import type { Database, DbTransaction } from '@compta/db';
 import type { buildAuthRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody } from '@compta/contracts';
 import type { buildAccountsRepository } from '../accounts/accounts.repository.js';
+import type { buildEventsRepository } from '../notifications/events.repository.js';
+import type { buildNotificationsRepository } from '../notifications/notifications.repository.js';
 
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
+type EventsRepository = ReturnType<typeof buildEventsRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
+type NotificationsRepository = ReturnType<typeof buildNotificationsRepository>;
+
+type EmailRecipient = { id: string; email: string; username: string };
 
 interface AuthServiceConfig {
   appUrl: string;
@@ -29,7 +34,8 @@ export function buildAuthService(
   db: Database['db'],
   authRepository: AuthRepository,
   accountsRepository: AccountsRepository,
-  emailProvider: EmailProvider,
+  notificationsRepository: NotificationsRepository,
+  eventsRepository: EventsRepository,
   config: AuthServiceConfig,
 ) {
   function generateVerificationToken() {
@@ -48,31 +54,47 @@ export function buildAuthService(
     return { token, expiresAt, passwordResetUrl };
   }
 
-  async function sendVerificationEmail(email: string, username: string, verificationUrl: string) {
-    await emailProvider.sendEmail(
-      email,
-      'Verify your Compta email',
-      `
-        <p>Hi ${escapeHtml(username)},</p>
-        <p>Click the link below to verify your email address. This link expires in 8 hours.</p>
-        <p><a href="${verificationUrl}">Verify my email</a></p>
-        <p>Or copy this URL into your browser:<br>${verificationUrl}</p>
-        <p>If you didn't create an account, you can ignore this email.</p>
-      `,
+  async function queueEmail(user: EmailRecipient, job: EmailJob, tx: DbTransaction) {
+    const notification = await notificationsRepository.create(
+      { userId: user.id, type: job.template },
+      tx,
+    );
+    await eventsRepository.create({ eventId: notification.id, payload: job }, tx);
+  }
+
+  async function queueVerificationEmail(user: EmailRecipient, tx: DbTransaction) {
+    const { token, expiresAt, verificationUrl } = generateVerificationToken();
+
+    await authRepository.createEmailVerificationToken(
+      { userId: user.id, tokenHash: hashToken(token), expiresAt },
+      tx,
+    );
+    await queueEmail(
+      user,
+      {
+        to: user.email,
+        template: 'verify-email',
+        params: { username: user.username, url: verificationUrl },
+      },
+      tx,
     );
   }
 
-  async function sendPasswordResetEmail(email: string, username: string, passwordResetUrl: string) {
-    await emailProvider.sendEmail(
-      email,
-      'Reset your Compta password',
-      `
-        <p>Hi ${escapeHtml(username)},</p>
-        <p>Click the link below to reset your password. This link expires in 30 minutes.</p>
-        <p><a href="${passwordResetUrl}">Reset my password</a></p>
-        <p>Or copy this URL into your browser:<br>${passwordResetUrl}</p>
-        <p>If you didn't request a password reset, you can ignore this email.</p>
-      `,
+  async function queuePasswordResetEmail(user: EmailRecipient, tx: DbTransaction) {
+    const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
+
+    await authRepository.createPasswordResetToken(
+      { userId: user.id, tokenHash: hashToken(token), expiresAt },
+      tx,
+    );
+    await queueEmail(
+      user,
+      {
+        to: user.email,
+        template: 'reset-password',
+        params: { username: user.username, url: passwordResetUrl },
+      },
+      tx,
     );
   }
 
@@ -90,6 +112,7 @@ export function buildAuthService(
         newUser = await db.transaction(async (tx) => {
           const user = await authRepository.createUser({ username, email, passwordHash }, tx);
           await accountsRepository.createDefault(user.id, tx);
+          await queueVerificationEmail(user, tx);
           return user;
         });
       } catch (err) {
@@ -97,16 +120,6 @@ export function buildAuthService(
         if (isUniqueViolation(err)) throw new ConflictError('Email already in use');
         throw err;
       }
-
-      const { token, expiresAt, verificationUrl } = generateVerificationToken();
-
-      await authRepository.createEmailVerificationToken({
-        userId: newUser.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendVerificationEmail(email, username, verificationUrl);
 
       return newUser;
     },
@@ -144,15 +157,7 @@ export function buildAuthService(
         throw new ConflictError('Email already verified');
       }
 
-      const { token, expiresAt, verificationUrl } = generateVerificationToken();
-
-      await authRepository.createEmailVerificationToken({
-        userId: user.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendVerificationEmail(user.email, user.username, verificationUrl);
+      await db.transaction((tx) => queueVerificationEmail(user, tx));
     },
 
     async verifyEmailToken(verificationToken: string) {
@@ -184,15 +189,7 @@ export function buildAuthService(
         return;
       }
 
-      const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
-
-      await authRepository.createPasswordResetToken({
-        userId: user.id,
-        tokenHash: hashToken(token),
-        expiresAt,
-      });
-
-      await sendPasswordResetEmail(user.email, user.username, passwordResetUrl);
+      await db.transaction((tx) => queuePasswordResetEmail(user, tx));
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {

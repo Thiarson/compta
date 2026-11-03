@@ -18,7 +18,7 @@ export default defineConfig({
           environment: 'node',
           include: ['test/integration/**/*.test.ts'],
           globalSetup: ['./test/global-setup.ts'],
-          setupFiles: ['./test/setup-env.ts'],
+          setupFiles: ['./test/setup-env.ts', './test/setup-queue.ts'],
           fileParallelism: false, // all files share one database
           hookTimeout: 60_000, // first container start pulls the image
           testTimeout: 15_000, // argon2 at 64 MiB is slow-ish

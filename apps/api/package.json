@@ -29,6 +29,7 @@
     "@sinclair/typebox": "^0.34.30",
     "ajv-errors": "^3.0.0",
     "argon2": "^0.44.0",
+    "bullmq": "^6.5.4",
     "close-with-grace": "^2.5.0",
     "drizzle-orm": "^0.45.2",
     "escape-html": "^1.0.3",

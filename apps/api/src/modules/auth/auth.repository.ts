@@ -45,8 +45,11 @@ export function buildAuthRepository(db: Database['db']) {
       return revoked.length > 0;
     },
 
-    async createEmailVerificationToken(data: NewEmailVerificationToken) {
-      await db.transaction(async (tx) => {
+    async createEmailVerificationToken(
+      data: NewEmailVerificationToken,
+      executor: Database['db'] | DbTransaction = db,
+    ) {
+      await executor.transaction(async (tx) => {
         await tx
           .update(emailVerificationTokens)
           .set({ invalidatedAt: new Date() })
@@ -55,8 +58,11 @@ export function buildAuthRepository(db: Database['db']) {
       });
     },
 
-    async createPasswordResetToken(data: NewPasswordResetToken) {
-      await db.transaction(async (tx) => {
+    async createPasswordResetToken(
+      data: NewPasswordResetToken,
+      executor: Database['db'] | DbTransaction = db,
+    ) {
+      await executor.transaction(async (tx) => {
         await tx
           .update(passwordResetTokens)
           .set({ invalidatedAt: new Date() })
@@ -119,6 +125,11 @@ export function buildAuthRepository(db: Database['db']) {
         }
 
         await tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId));
+        // A password reset must end every existing session, including a stolen one
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: new Date() })
+          .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
         return true;
       });
     },

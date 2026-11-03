@@ -29,6 +29,15 @@ describe('_authenticated guard', () => {
     expect(router.state.location.search).toEqual({ redirect: '/accounts/a1' });
   });
 
+  it('shows the error page, not the login page, when the API is down', async () => {
+    server.use(http.get(apiUrl('/auth/me'), () => apiError(500, 'INTERNAL', 'Database down')));
+
+    const { router } = await renderApp('/accounts/a1', { settle: false });
+
+    expect(await screen.findByText('Something went wrong')).toBeInTheDocument();
+    expect(router.state.location.pathname).not.toBe('/login');
+  });
+
   it('sends a user with an unverified email to /verify-email', async () => {
     mockSession(unverifiedUser);
 

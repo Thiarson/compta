@@ -27,7 +27,9 @@ function createTestContext(path: string) {
 }
 
 // Renders the real route tree at `path`, so guards, loaders and pages run as in the app.
-export async function renderApp(path = '/') {
+// `settle: false` skips waiting for the router to go idle:
+// it stays "pending" when a layout guard throws, even though the error page is already on screen.
+export async function renderApp(path = '/', { settle = true } = {}) {
   const { queryClient, router } = createTestContext(path);
 
   // RouterProvider runs the initial load itself; loading here too would run every loader twice.
@@ -36,8 +38,10 @@ export async function renderApp(path = '/') {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  await waitFor(() => expect(router.state.status).toBe('idle'));
-  await waitFor(() => expect(router.state.resolvedLocation).toBeDefined());
+  if (settle) {
+    await waitFor(() => expect(router.state.status).toBe('idle'));
+    await waitFor(() => expect(router.state.resolvedLocation).toBeDefined());
+  }
 
   return { router, queryClient };
 }

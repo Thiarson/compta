@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { emailVerificationTokens } from '@compta/db';
-import { lastEmailToken, setupTestApp } from '../../helpers/app.js';
+import { lastEmailToken, latestNotification, setupTestApp } from '../../helpers/app.js';
 import { API, call } from '../../helpers/api.js';
 import { registerUser } from '../../helpers/auth.js';
 import { hashToken } from '../../../src/utils/token.js';
@@ -100,10 +100,12 @@ describe('email verification', () => {
       const res = await resend(alice.headers);
 
       expect(res.statusCode).toBe(202);
+      const notification = await latestNotification(ctx.app, alice.user.id);
       expect(ctx.sendEmail).toHaveBeenCalledExactlyOnceWith(
         alice.email,
         expect.any(String),
         expect.stringContaining('/verify-email?token='),
+        notification.id,
       );
       const newToken = lastEmailToken(ctx.sendEmail);
       expect(newToken).not.toBe(oldToken);

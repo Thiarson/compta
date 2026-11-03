@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { toast } from 'sonner';
 
 import { AddTransactionDialog } from '@/components/add-transaction-dialog';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -30,7 +29,7 @@ import {
   useTransactions,
   type Transaction,
 } from '@/features/transaction/transaction.hooks';
-import { ApiError } from '@/lib/api-error';
+import { toastApiError } from '@/lib/api-error';
 import { cn, formatCurrency, isSameDay, toIsoDate } from '@/lib/utils';
 import { useParams } from '@tanstack/react-router';
 import {
@@ -52,8 +51,8 @@ const dayLabelFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 export default function DashboardPage() {
-  const { data: accounts, isPending } = useAccount();
-  const { data: allTransactions = [] } = useTransactions();
+  const accountsQuery = useAccount();
+  const transactionsQuery = useTransactions();
   const { mutate: createTransaction } = useCreateTransaction();
   const [addTransactionOpen, setAddTransactionOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(() => new Date());
@@ -65,13 +64,21 @@ export default function DashboardPage() {
 
   // The dialog closes on submit, so a failure can only be reported as a toast.
   function addTransaction(body: AddTransactionBody) {
-    createTransaction(body, {
-      onError: (error) =>
-        toast.error(error instanceof ApiError ? error.message : 'Something went wrong'),
-    });
+    createTransaction(body, { onError: toastApiError });
   }
 
-  const hasAccounts = !isPending && accounts && accounts.length > 0;
+  // Show nothing but a skeleton or an error until both loaded.
+  const accounts = accountsQuery.data;
+  const allTransactions = transactionsQuery.data ?? [];
+  const isPending = accountsQuery.isPending || transactionsQuery.isPending;
+  const isError = accountsQuery.isError || transactionsQuery.isError;
+
+  function retry() {
+    if (accountsQuery.isError) accountsQuery.refetch();
+    if (transactionsQuery.isError) transactionsQuery.refetch();
+  }
+
+  const hasAccounts = !isPending && !isError && accounts && accounts.length > 0;
   const activeAccount = hasAccounts
     ? (accounts.find((account) => account.id === accountId) ?? accounts[0])
     : undefined;
@@ -128,6 +135,16 @@ export default function DashboardPage() {
               <Skeleton className="h-28 rounded-xl" />
               <Skeleton className="h-28 rounded-xl" />
             </div>
+          ) : isError ? (
+            <Card className="items-center py-16 text-center">
+              <CardContent className="flex flex-col items-center gap-2">
+                <CardTitle>Couldn&apos;t load your data</CardTitle>
+                <CardDescription>Check your connection and try again.</CardDescription>
+                <Button variant="outline" onClick={retry}>
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
           ) : hasAccounts ? (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +235,7 @@ export default function DashboardPage() {
                               <Button
                                 variant="ghost"
                                 size="icon-xs"
-                                className="text-muted-foreground opacity-0 group-hover/transaction-row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+                                className="text-muted-foreground opacity-0 pointer-coarse:opacity-100 group-hover/transaction-row:opacity-100 hover:text-destructive focus-visible:opacity-100"
                                 aria-label="Delete transaction"
                                 onClick={() => setDeleteTransactionTarget(transaction)}
                               >

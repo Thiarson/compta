@@ -1,6 +1,6 @@
 import fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import emailPlugin from '../../../src/plugins/email.js';
+import emailPlugin, { SEND_TIMEOUT_MS } from '../../../src/plugins/email.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -30,48 +30,71 @@ describe('email plugin', () => {
   it('sends the email from the configured address', async () => {
     send.mockResolvedValue({ data: { id: 'email-1' }, error: null });
 
-    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
+    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>', 'key-1');
 
-    expect(send).toHaveBeenCalledExactlyOnceWith({
-      from: 'noreply@compta.dev',
-      to: 'alice@test.dev',
-      subject: 'Hello',
-      html: '<p>Hi</p>',
-    });
-  });
-
-  it('logs and resolves when the provider reports an error', async () => {
-    const logError = vi.spyOn(app.log, 'error');
-    const error = { name: 'validation_error', message: 'Invalid `to` field', statusCode: 422 };
-    send.mockResolvedValue({ data: null, error });
-
-    await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>')).resolves.toBeUndefined();
-    expect(logError).toHaveBeenCalledWith(
-      { err: error, subject: 'Hello' },
-      'email: delivery failed',
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+      {
+        from: 'noreply@compta.dev',
+        to: 'alice@test.dev',
+        subject: 'Hello',
+        html: '<p>Hi</p>',
+      },
+      { idempotencyKey: 'key-1' }, // lets Resend drop a repeated send of the same job
     );
   });
 
-  it('logs and resolves when the provider cannot be reached', async () => {
-    const logError = vi.spyOn(app.log, 'error');
+  it.each([429, 409, 500, 503, null])(
+    'throws a retryable error when the provider answers %s',
+    async (statusCode) => {
+      send.mockResolvedValue({
+        data: null,
+        error: { name: 'application_error', message: 'x', statusCode },
+      });
+
+      await expect(
+        app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1'),
+      ).rejects.toMatchObject({
+        name: 'EmailSendError',
+        retryable: true,
+      });
+    },
+  );
+
+  it.each([400, 401, 403, 422])(
+    'throws a permanent error when the provider answers %s',
+    async (statusCode) => {
+      send.mockResolvedValue({
+        data: null,
+        error: { name: 'validation_error', message: 'Invalid `to` field', statusCode },
+      });
+
+      await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>', 'key-1')).rejects.toMatchObject(
+        {
+          message: 'validation_error: Invalid `to` field',
+          retryable: false,
+        },
+      );
+    },
+  );
+
+  it('rejects with the original error when the provider cannot be reached', async () => {
     const failure = new Error('ECONNRESET');
     send.mockRejectedValue(failure);
 
-    await expect(
-      app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>'),
-    ).resolves.toBeUndefined();
-    expect(logError).toHaveBeenCalledWith(
-      { err: failure, subject: 'Hello' },
-      'email: delivery failed',
+    await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1')).rejects.toBe(
+      failure,
     );
   });
 
-  it('never logs the recipient address', async () => {
-    const logError = vi.spyOn(app.log, 'error');
-    send.mockRejectedValue(new Error('ECONNRESET'));
+  it('rejects when the provider does not answer in time', async () => {
+    vi.useFakeTimers();
+    send.mockReturnValue(new Promise(() => {}));
 
-    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
+    const sending = app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1');
+    const assertion = expect(sending).rejects.toThrow('timed out');
+    await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
 
-    expect(JSON.stringify(logError.mock.calls)).not.toContain('alice@test.dev');
+    await assertion;
+    vi.useRealTimers();
   });
 });

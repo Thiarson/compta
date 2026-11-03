@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ApiError, getFieldErrors } from '@/lib/api-error';
+import { getFieldErrors, toastFormError } from '@/lib/api-error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useLogin } from '@/features/auth/auth.hooks';
@@ -28,11 +27,7 @@ export function LoginForm({
       { email, password },
       {
         onSuccess,
-        onError: (error) => {
-          if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') {
-            toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
-          }
-        },
+        onError: toastFormError,
       },
     );
   }

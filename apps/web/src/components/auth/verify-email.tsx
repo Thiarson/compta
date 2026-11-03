@@ -3,7 +3,7 @@ import { Link, getRouteApi, useNavigate, useSearch } from '@tanstack/react-route
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
-import { ApiError } from '@/lib/api-error';
+import { toastApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { AuthPending } from '@/components/auth/auth-pending';
 import { Field, FieldDescription, FieldError, FieldGroup } from '@/components/ui/field';
@@ -110,9 +110,7 @@ function ResendVerification({
         setCooldown(RESEND_COOLDOWN_SECONDS);
         toast.success('Verification email sent.');
       },
-      onError: (error) => {
-        toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
-      },
+      onError: toastApiError,
     });
   }
 

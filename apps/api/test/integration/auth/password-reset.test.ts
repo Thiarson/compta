@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { passwordResetTokens } from '@compta/db';
-import { lastEmailToken, setupTestApp } from '../../helpers/app.js';
-import { API, call } from '../../helpers/api.js';
+import { lastEmailToken, latestNotification, setupTestApp } from '../../helpers/app.js';
+import { API, call, cookieValue } from '../../helpers/api.js';
 import { login, registerUser } from '../../helpers/auth.js';
 import { hashToken } from '../../../src/utils/token.js';
 
@@ -49,10 +49,13 @@ describe('password reset', () => {
       const res = await forgot(alice.email);
 
       expect(res.statusCode).toBe(204);
+      const notification = await latestNotification(ctx.app, alice.user.id);
+      expect(notification).toMatchObject({ type: 'reset-password', status: 'pending' });
       expect(ctx.sendEmail).toHaveBeenCalledExactlyOnceWith(
         alice.email,
         expect.any(String),
         expect.stringContaining('/reset-password?token='),
+        notification.id,
       );
       const row = await tokenRow(lastEmailToken(ctx.sendEmail));
       expect(row).toMatchObject({ userId: alice.user.id, usedAt: null, invalidatedAt: null });
@@ -66,6 +69,7 @@ describe('password reset', () => {
 
       expect(ctx.sendEmail).toHaveBeenCalledExactlyOnceWith(
         alice.email,
+        expect.any(String),
         expect.any(String),
         expect.any(String),
       );
@@ -142,6 +146,23 @@ describe('password reset', () => {
       expect(res.statusCode).toBe(204);
       expect((await login(ctx.app, alice.email, NEW_PASSWORD)).statusCode).toBe(200);
       expect((await login(ctx.app, alice.email, alice.password)).statusCode).toBe(401);
+    });
+
+    it('ends every existing session', async () => {
+      const { alice, token } = await requestReset();
+      const otherSession = await login(ctx.app, alice.email, alice.password);
+      const otherRefreshToken = cookieValue(otherSession, 'refreshToken')!;
+
+      await reset(token);
+
+      for (const refreshToken of [alice.refreshToken, otherRefreshToken]) {
+        const res = await call(ctx.app, {
+          method: 'POST',
+          url: `${API}/auth/refresh`,
+          cookies: { refreshToken },
+        });
+        expect(res.statusCode).toBe(401);
+      }
     });
 
     it('can only be used once', async () => {

@@ -44,7 +44,7 @@ export function DeleteTransactionDialog({
           <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
           <AlertDialogDescription>
             {transaction?.description ? `“${transaction.description}” ` : ''}
-            This will permanently remove this transaction. This action cannot be undone.
+            This will remove this transaction. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {deleteTransaction.isError && <FieldError>{deleteTransaction.error.message}</FieldError>}

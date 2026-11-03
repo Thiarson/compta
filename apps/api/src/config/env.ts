@@ -14,7 +14,7 @@ interface ConfigSchema {
   REFRESH_TOKEN_TTL_DAYS: number;
   EMAIL_FROM: string;
   EMAIL_API_KEY: string;
-  REDIS_URL?: string;
+  REDIS_URL: string;
 }
 
 declare module 'fastify' {
@@ -32,6 +32,7 @@ const schema = {
     'APP_URL',
     'ALLOWED_ORIGINS',
     'DATABASE_URL',
+    'REDIS_URL',
     'JWT_ACCESS_TOKEN_SECRET',
     'JWT_REFRESH_TOKEN_SECRET',
     'EMAIL_FROM',

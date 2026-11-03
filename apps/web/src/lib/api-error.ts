@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -38,4 +40,14 @@ export function getFieldErrors(error: unknown, field: string): { message?: strin
   return (details ?? [])
     .filter((detail) => fieldFromDetail(detail) === field)
     .map((detail) => ({ message: detail.message }));
+}
+
+export function toastApiError(error: unknown) {
+  toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+}
+
+// For forms that render validation errors inline: toast everything else.
+export function toastFormError(error: unknown) {
+  if (error instanceof ApiError && error.code === 'VALIDATION_ERROR') return;
+  toastApiError(error);
 }

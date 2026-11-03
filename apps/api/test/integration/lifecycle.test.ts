@@ -26,13 +26,13 @@ describe('app lifecycle', () => {
     await expect(app.db.execute(sql`select 1`)).rejects.toThrow();
   });
 
-  it('falls back to the in-memory rate-limit store when REDIS_URL is malformed', async () => {
-    const app = await bootWith({ REDIS_URL: 'not a url' });
+  it('refuses to boot when REDIS_URL is malformed (the queue cannot run without Redis)', async () => {
+    vi.stubEnv('REDIS_URL', 'not a url');
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
 
-    const res = await call(app, { method: 'GET', url: '/healthz' });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.headers['x-ratelimit-limit']).toBe('100');
+    await expect(buildTestApp()).rejects.toThrow();
   });
 
   describe('when Redis is unreachable', () => {
