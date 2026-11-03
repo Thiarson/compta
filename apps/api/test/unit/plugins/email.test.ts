@@ -30,14 +30,17 @@ describe('email plugin', () => {
   it('sends the email from the configured address', async () => {
     send.mockResolvedValue({ data: { id: 'email-1' }, error: null });
 
-    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>');
+    await app.email.sendEmail('alice@test.dev', 'Hello', '<p>Hi</p>', 'key-1');
 
-    expect(send).toHaveBeenCalledExactlyOnceWith({
-      from: 'noreply@compta.dev',
-      to: 'alice@test.dev',
-      subject: 'Hello',
-      html: '<p>Hi</p>',
-    });
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+      {
+        from: 'noreply@compta.dev',
+        to: 'alice@test.dev',
+        subject: 'Hello',
+        html: '<p>Hi</p>',
+      },
+      { idempotencyKey: 'key-1' }, // lets Resend drop a repeated send of the same job
+    );
   });
 
   it.each([429, 409, 500, 503, null])(
@@ -48,7 +51,9 @@ describe('email plugin', () => {
         error: { name: 'application_error', message: 'x', statusCode },
       });
 
-      await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>')).rejects.toMatchObject({
+      await expect(
+        app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1'),
+      ).rejects.toMatchObject({
         name: 'EmailSendError',
         retryable: true,
       });
@@ -63,10 +68,12 @@ describe('email plugin', () => {
         error: { name: 'validation_error', message: 'Invalid `to` field', statusCode },
       });
 
-      await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>')).rejects.toMatchObject({
-        message: 'validation_error: Invalid `to` field',
-        retryable: false,
-      });
+      await expect(app.email.sendEmail('bad', 'Hello', '<p>Hi</p>', 'key-1')).rejects.toMatchObject(
+        {
+          message: 'validation_error: Invalid `to` field',
+          retryable: false,
+        },
+      );
     },
   );
 
@@ -74,14 +81,16 @@ describe('email plugin', () => {
     const failure = new Error('ECONNRESET');
     send.mockRejectedValue(failure);
 
-    await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>')).rejects.toBe(failure);
+    await expect(app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1')).rejects.toBe(
+      failure,
+    );
   });
 
   it('rejects when the provider does not answer in time', async () => {
     vi.useFakeTimers();
     send.mockReturnValue(new Promise(() => {}));
 
-    const sending = app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>');
+    const sending = app.email.sendEmail('a@test.dev', 'Hello', '<p>Hi</p>', 'key-1');
     const assertion = expect(sending).rejects.toThrow('timed out');
     await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS);
 

@@ -57,6 +57,7 @@ describe('auth.service', () => {
     updatePassword: vi.fn(),
   };
   const accountsRepository = { createDefault: vi.fn() };
+  const TOKEN_ID = 'token-row-id';
   const emailQueue = { add: vi.fn() };
   const log = { error: vi.fn() };
 
@@ -71,6 +72,8 @@ describe('auth.service', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     db.transaction.mockImplementation((callback: (tx: unknown) => unknown) => callback(tx));
+    authRepository.createEmailVerificationToken.mockResolvedValue({ id: TOKEN_ID });
+    authRepository.createPasswordResetToken.mockResolvedValue({ id: TOKEN_ID });
   });
 
   describe('register', () => {
@@ -134,14 +137,30 @@ describe('auth.service', () => {
         tx,
       );
       expect(accountsRepository.createDefault).toHaveBeenCalledWith(user.id, tx);
-      expect(emailQueue.add).toHaveBeenCalledExactlyOnceWith('verify-email', {
-        to: 'alice@test.dev',
-        template: 'verify-email',
-        params: {
-          username: 'alice',
-          url: expect.stringContaining(`${APP_URL}/verify-email?token=`),
+      expect(emailQueue.add).toHaveBeenCalledExactlyOnceWith(
+        'verify-email',
+        {
+          to: 'alice@test.dev',
+          template: 'verify-email',
+          params: {
+            username: 'alice',
+            url: expect.stringContaining(`${APP_URL}/verify-email?token=`),
+          },
         },
-      });
+        { jobId: `verify-email-${TOKEN_ID}` },
+      );
+    });
+
+    it('derives the job id from the token row, never from the secret token', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(undefined);
+      authRepository.createUser.mockResolvedValue(buildUser());
+
+      await service.register(input);
+
+      const [, job, options] = emailQueue.add.mock.calls[0];
+      const emailedToken = renderEmail(job).html.match(/token=([a-f0-9]{64})/)![1];
+      expect(options.jobId).not.toContain(emailedToken);
+      expect(options.jobId).not.toContain(':'); // BullMQ rejects ':' in custom ids
     });
 
     it('still registers the user when the email cannot be enqueued, and logs it', async () => {
@@ -320,6 +339,7 @@ describe('auth.service', () => {
             url: expect.stringContaining(`${APP_URL}/reset-password?token=`),
           }),
         }),
+        { jobId: `reset-password-${TOKEN_ID}` },
       );
     });
   });

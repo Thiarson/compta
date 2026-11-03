@@ -46,22 +46,32 @@ export function buildAuthRepository(db: Database['db']) {
     },
 
     async createEmailVerificationToken(data: NewEmailVerificationToken) {
-      await db.transaction(async (tx) => {
+      return await db.transaction(async (tx) => {
         await tx
           .update(emailVerificationTokens)
           .set({ invalidatedAt: new Date() })
           .where(eq(emailVerificationTokens.userId, data.userId));
-        await tx.insert(emailVerificationTokens).values(data);
+        const result = await tx
+          .insert(emailVerificationTokens)
+          .values(data)
+          .returning({ id: emailVerificationTokens.id });
+
+        return result[0];
       });
     },
 
     async createPasswordResetToken(data: NewPasswordResetToken) {
-      await db.transaction(async (tx) => {
+      return await db.transaction(async (tx) => {
         await tx
           .update(passwordResetTokens)
           .set({ invalidatedAt: new Date() })
           .where(eq(passwordResetTokens.userId, data.userId));
-        await tx.insert(passwordResetTokens).values(data);
+        const result = await tx
+          .insert(passwordResetTokens)
+          .values(data)
+          .returning({ id: passwordResetTokens.id });
+
+        return result[0];
       });
     },
 

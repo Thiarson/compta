@@ -39,7 +39,7 @@ describe('processEmailJob', () => {
     template: 'verify-email',
     params: { username: 'alice', url: 'http://app.test/x?token=abc' },
   };
-  const job = { data } as Job<EmailJob>;
+  const job = { id: 'verify-email-token-1', data } as Job<EmailJob>;
 
   function providerThat(sendEmail: () => Promise<void>) {
     return { sendEmail: vi.fn(sendEmail) } as unknown as EmailProvider & {
@@ -56,7 +56,27 @@ describe('processEmailJob', () => {
       'alice@test.dev',
       'Verify your Compta email',
       expect.stringContaining('Hi alice,'),
+      'verify-email-token-1',
     );
+  });
+
+  it('sends the same idempotency key every time a job is delivered', async () => {
+    const email = providerThat(async () => {});
+
+    await processEmailJob(email, job);
+    await processEmailJob(email, job); // e.g. redelivered after a worker crash
+
+    const keys = email.sendEmail.mock.calls.map((call) => call[3]);
+    expect(keys).toEqual(['verify-email-token-1', 'verify-email-token-1']);
+  });
+
+  it('fails permanently, without sending, when the job has no id', async () => {
+    const email = providerThat(async () => {});
+
+    await expect(processEmailJob(email, { data } as Job<EmailJob>)).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(email.sendEmail).not.toHaveBeenCalled();
   });
 
   it('rethrows transient errors so the queue retries', async () => {

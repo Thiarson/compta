@@ -74,6 +74,7 @@ describe('POST /auth/register', () => {
       payload.email,
       expect.any(String),
       expect.stringContaining('/verify-email?token='),
+      expect.stringMatching(/^verify-email-[0-9a-f-]{36}$/), // job id: template + token row uuid
     );
     const token = lastEmailToken(ctx.sendEmail);
     const [row] = await ctx.app.db

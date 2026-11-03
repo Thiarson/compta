@@ -22,6 +22,8 @@ import type { buildAccountsRepository } from '../accounts/accounts.repository.js
 type AuthRepository = ReturnType<typeof buildAuthRepository>;
 type AccountsRepository = ReturnType<typeof buildAccountsRepository>;
 
+type EmailRecipient = { email: string; username: string };
+
 interface AuthServiceConfig {
   appUrl: string;
   log: FastifyBaseLogger;
@@ -50,21 +52,31 @@ export function buildAuthService(
     return { token, expiresAt, passwordResetUrl };
   }
 
-  // Delivery is best-effort: a queue outage is logged and never thrown, so it can't fail a request
-  async function enqueueEmail(job: EmailJob) {
+  // Delivery is best-effort: a queue outage is logged and never thrown, so it can't fail a request.
+  // `tokenId` makes the job id unique per token row, so enqueueing the same email twice adds one job
+  // while a later resend (a new token) is not dropped.
+  async function enqueueEmail(tokenId: string, job: EmailJob) {
     try {
-      await emailQueue.add(job.template, job);
+      await emailQueue.add(job.template, job, { jobId: `${job.template}-${tokenId}` });
     } catch (err) {
       config.log.error({ err, template: job.template }, 'email: failed to enqueue');
     }
   }
 
-  function sendVerificationEmail(email: string, username: string, url: string) {
-    return enqueueEmail({ to: email, template: 'verify-email', params: { username, url } });
+  function sendVerificationEmail(tokenId: string, user: EmailRecipient, url: string) {
+    return enqueueEmail(tokenId, {
+      to: user.email,
+      template: 'verify-email',
+      params: { username: user.username, url },
+    });
   }
 
-  function sendPasswordResetEmail(email: string, username: string, url: string) {
-    return enqueueEmail({ to: email, template: 'reset-password', params: { username, url } });
+  function sendPasswordResetEmail(tokenId: string, user: EmailRecipient, url: string) {
+    return enqueueEmail(tokenId, {
+      to: user.email,
+      template: 'reset-password',
+      params: { username: user.username, url },
+    });
   }
 
   return {
@@ -91,13 +103,13 @@ export function buildAuthService(
 
       const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
-      await authRepository.createEmailVerificationToken({
+      const emailVerificationToken = await authRepository.createEmailVerificationToken({
         userId: newUser.id,
         tokenHash: hashToken(token),
         expiresAt,
       });
 
-      await sendVerificationEmail(email, username, verificationUrl);
+      await sendVerificationEmail(emailVerificationToken.id, { email, username }, verificationUrl);
 
       return newUser;
     },
@@ -137,13 +149,13 @@ export function buildAuthService(
 
       const { token, expiresAt, verificationUrl } = generateVerificationToken();
 
-      await authRepository.createEmailVerificationToken({
+      const emailVerificationToken = await authRepository.createEmailVerificationToken({
         userId: user.id,
         tokenHash: hashToken(token),
         expiresAt,
       });
 
-      await sendVerificationEmail(user.email, user.username, verificationUrl);
+      await sendVerificationEmail(emailVerificationToken.id, user, verificationUrl);
     },
 
     async verifyEmailToken(verificationToken: string) {
@@ -177,13 +189,13 @@ export function buildAuthService(
 
       const { token, expiresAt, passwordResetUrl } = generatePasswordResetToken();
 
-      await authRepository.createPasswordResetToken({
+      const passwordResetToken = await authRepository.createPasswordResetToken({
         userId: user.id,
         tokenHash: hashToken(token),
         expiresAt,
       });
 
-      await sendPasswordResetEmail(user.email, user.username, passwordResetUrl);
+      await sendPasswordResetEmail(passwordResetToken.id, user, passwordResetUrl);
     },
 
     async verifyPasswordResetToken(passwordResetToken: string) {

@@ -53,6 +53,7 @@ describe('password reset', () => {
         alice.email,
         expect.any(String),
         expect.stringContaining('/reset-password?token='),
+        expect.stringMatching(/^reset-password-[0-9a-f-]{36}$/), // job id: template + token row uuid
       );
       const row = await tokenRow(lastEmailToken(ctx.sendEmail));
       expect(row).toMatchObject({ userId: alice.user.id, usedAt: null, invalidatedAt: null });
@@ -68,6 +69,7 @@ describe('password reset', () => {
         alice.email,
         expect.any(String),
         expect.any(String),
+        expect.stringMatching(/^reset-password-[0-9a-f-]{36}$/), // job id: template + token row uuid
       );
     });
 

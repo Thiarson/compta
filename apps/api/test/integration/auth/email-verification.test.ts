@@ -104,6 +104,7 @@ describe('email verification', () => {
         alice.email,
         expect.any(String),
         expect.stringContaining('/verify-email?token='),
+        expect.stringMatching(/^verify-email-[0-9a-f-]{36}$/), // job id: template + token row uuid
       );
       const newToken = lastEmailToken(ctx.sendEmail);
       expect(newToken).not.toBe(oldToken);

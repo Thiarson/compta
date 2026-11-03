@@ -11,9 +11,9 @@ export async function buildTestApp() {
   // Never call Resend; capture emails so tests can read the tokens in them
   const sendEmail = vi.spyOn(app.email, 'sendEmail').mockResolvedValue();
   // Stand in for the worker: render each enqueued job and "send" it right away
-  vi.spyOn(app.emailQueue, 'add').mockImplementation(async (_name, job) => {
+  vi.spyOn(app.emailQueue, 'add').mockImplementation(async (_name, job, opts) => {
     const { subject, html } = renderEmail(job);
-    await app.email.sendEmail(job.to, subject, html);
+    await app.email.sendEmail(job.to, subject, html, opts?.jobId ?? 'test-job');
     return {} as never;
   });
   return { app, sendEmail };

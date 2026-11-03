@@ -38,10 +38,13 @@ export function renderEmail({ template, params }: EmailJob) {
 }
 
 export async function processEmailJob(email: EmailProvider, job: Job<EmailJob>) {
+  // The job id doubles as the provider's idempotency key, so a re-delivered job can't send twice
+  if (!job.id) throw new UnrecoverableError('email job has no id');
+
   const { subject, html } = renderEmail(job.data);
 
   try {
-    await email.sendEmail(job.data.to, subject, html);
+    await email.sendEmail(job.data.to, subject, html, job.id);
   } catch (err) {
     // Permanent failure: retrying can't help, so skip the remaining attempts
     if (err instanceof EmailSendError && !err.retryable) {

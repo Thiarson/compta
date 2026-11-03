@@ -26,10 +26,10 @@ function isRetryableStatus(statusCode: number | null) {
  */
 function buildEmailProvider(resend: Resend, from: string) {
   return {
-    async sendEmail(to: string, subject: string, body: string) {
+    async sendEmail(to: string, subject: string, body: string, idempotencyKey: string) {
       // Resend reports API errors in `error` instead of throwing
       const { error } = await withTimeout(
-        resend.emails.send({ from, to, subject, html: body }),
+        resend.emails.send({ from, to, subject, html: body }, { idempotencyKey }),
         SEND_TIMEOUT_MS,
       );
       if (error) {
